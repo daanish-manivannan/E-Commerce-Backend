@@ -1,0 +1,60 @@
+# =========================
+# Python & Django
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# =========================
+# Virtual Environment
+# =========================
+venv/
+env/
+ENV/
+.venv/
+
+# =========================
+# Testing (pytest)
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.local
+.env.*
+
+# =========================
+# Docker
+# =========================
+# (Ignore local database mounts so they don't get committed)
+postgres_data/
+
+# =========================
+# IDEs & Editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS Generated Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
