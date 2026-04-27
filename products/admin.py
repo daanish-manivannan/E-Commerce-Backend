@@ -1,12 +1,17 @@
 from django.contrib import admin
+from .models import Product, Category
 
-# Register your models here.
-from .models import Product
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'created_at')
+    search_fields = ('name',)
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    # This dictates which columns show up in the admin table
-    list_display = ('name', 'price', 'is_active', 'created_at')
+    # Added category and stock to the main display table
+    list_display = ('name', 'category', 'price', 'stock', 'is_active')
     
-    # This adds a search bar for the name and description
+    # This creates a handy filtering sidebar in the admin panel!
+    list_filter = ('category', 'is_active') 
+    
     search_fields = ('name', 'description')

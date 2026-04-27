@@ -9,6 +9,9 @@ urlpatterns = [
     # User App Endpoints
     path('api/users/', include('users.urls', namespace='users')),
     
+    # NEW: Order API Endpoints
+    path('api/orders/', include('orders.urls', namespace='orders')),
+    
     # JWT Auth Endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

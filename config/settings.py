@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     # Local Apps
     'products',
     'users',
+    'orders',
+    
     
 ]
 
@@ -139,6 +141,7 @@ AUTH_USER_MODEL = 'users.CustomUser'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     # Optional but highly recommended: Make API read-only for anonymous users by default
     'DEFAULT_PERMISSION_CLASSES': (

@@ -1,10 +1,17 @@
-from django.views.generic import ListView
-from .models import Product
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from .models import Category, Product
+from .serializers import CategorySerializer, ProductSerializer
 
-class ProductListView(ListView):
-    model = Product
-    template_name = 'products/product_list.html'
-    context_object_name = 'products' 
+class CategoryViewSet(viewsets.ModelViewSet):
+    # Only show active categories
+    queryset = Category.objects.filter(is_active=True)
+    serializer_class = CategorySerializer
+    
+    # Anyone can view, but only logged-in users can create/edit
+    permission_classes = [IsAuthenticatedOrReadOnly] 
 
-    def get_queryset(self):
-        return Product.objects.filter(is_active=True)
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.filter(is_active=True)
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]

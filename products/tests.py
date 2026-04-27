@@ -1,20 +1,19 @@
-from django.test import TestCase
-
-# Create your tests here.
 import pytest
-
-from .models import Product
+from .models import Product, Category
 
 @pytest.mark.django_db
 def test_create_product():
-    # 1. Action: Create a product in the test database
+    # 1. Create the required category first
+    category = Category.objects.create(name="Electronics")
+    
+    # 2. Assign that category to the new product
     product = Product.objects.create(
+        category=category,
         name="Mechanical Keyboard",
         description="Clicky switches",
         price=120.50
     )
     
-    # 2. Assertions: Prove it saved correctly
     assert product.name == "Mechanical Keyboard"
     assert product.price == 120.50
     assert product.is_active is True
