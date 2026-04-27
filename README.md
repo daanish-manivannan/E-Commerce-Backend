@@ -35,15 +35,6 @@ A production-quality REST API built with Django and PostgreSQL, following a stri
 .\venv\Scripts\activate
 ```
 
-```markdown
-## 💻 Local Development Setup
-
-### 1. Environment Activation
-```bash
-# Activate the virtual environment
-.\venv\Scripts\activate
-```
-
 ### 2. Database Initialization
 Ensure Docker Desktop is running, then start the PostgreSQL container:
 ```bash
