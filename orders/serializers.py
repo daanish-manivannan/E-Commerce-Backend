@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
 from products.models import Product
+from .tasks import generate_invoice_and_send_email
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
@@ -33,9 +34,9 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"Not enough stock for {product.name}. Only {product.stock} left.")
         
         # --- 2. CREATION PHASE ---
-        # If the code reaches this line, we know we have enough stock for everything.
+        # If the code reaches this line, we know we have enough stock for everything.    
         order = Order.objects.create(user=self.context['request'].user, **validated_data)
-        
+
         for item_data in items_data:
             product = item_data['product']
             quantity = item_data['quantity']
@@ -52,4 +53,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 quantity=quantity
             )
             
+        # --- 3. BACKGROUND TASKS ---
+        # The .delay() method magically sends this to Redis instead of running it right now!
+        generate_invoice_and_send_email.delay(order.id)
         return order
