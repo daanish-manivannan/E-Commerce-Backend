@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-err5vd2#bdylw(08snf-k56h$4=at9gp+1x53rhb4ou@@z06*0'
+# Moved to env
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -155,3 +155,17 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
+# STRIPE SETTINGS
+# Note: In production, these MUST be moved to hidden environment variables!
+
+# Moved to env
+
+# From ENV
+from decouple import config
+
+# Replace your hardcoded keys with this:
+STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
+SECRET_KEY = config('DJANGO_SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
