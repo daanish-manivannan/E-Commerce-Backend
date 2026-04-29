@@ -1,26 +1,26 @@
-# 1. Use an official Python base image
-FROM python:3.11-slim
-
-# 2. Set environment variables to prevent Python from buffering logs
+# Stage 1: Build stage
+FROM python:3.11-slim as builder
+WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# 3. Set the working directory inside the container
-WORKDIR /app
-
-# 4. Install system dependencies (needed for Postgres and general tools)
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# 5. Install Python dependencies
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install gunicorn  # Production-grade web server
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# 6. Copy the rest of your project code
+# Stage 2: Runtime stage
+FROM python:3.11-slim
+WORKDIR /app
+COPY --from=builder /install /usr/local
 COPY . /app/
 
-# 7. Start the application using Gunicorn
+# Create the folder for WhiteNoise to collect files into
+RUN python manage.py collectstatic --noinput
+
+# Production command using Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]

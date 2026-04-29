@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # 1. The Database
   db:
     image: postgres:15
     container_name: ecom_postgres
@@ -14,20 +13,27 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecom_user -d ecom_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 2. The Message Broker (for Celery & Caching)
   redis:
     image: redis:7-alpine
     container_name: ecom_redis
     ports:
       - "6379:6379"
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 3. The Django Web Application
   web:
     build: .
     container_name: ecom_django
-    # Use runserver for dev; we will switch to gunicorn in the Dockerfile for prod
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
@@ -36,11 +42,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
 
-  # 4. Celery Worker (Processes the background tasks)
   worker:
     build: .
     container_name: ecom_worker
@@ -50,11 +57,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
 
-  # 5. Celery Beat (Schedules recurring tasks)
   beat:
     build: .
     container_name: ecom_beat
@@ -64,8 +72,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
 
 volumes:
