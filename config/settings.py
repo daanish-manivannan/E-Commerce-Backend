@@ -83,17 +83,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Replace your old SQLite DATABASES with this
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'ecom_db',
         'USER': 'ecom_user',
         'PASSWORD': 'ecom_password',
-        'HOST': 'localhost',
+        'HOST': 'db',  # This matches the service name in docker-compose
         'PORT': '5432',
     }
 }
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -150,8 +150,8 @@ REST_FRAMEWORK = {
 }
 
 # CELERY SETTINGS
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 

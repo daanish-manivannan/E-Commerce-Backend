@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # 1. The Database
   db:
     image: postgres:15
     container_name: ecom_postgres
@@ -12,11 +13,60 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # 2. The Message Broker (for Celery & Caching)
   redis:
     image: redis:7-alpine
+    container_name: ecom_redis
     ports:
       - "6379:6379"
+    restart: always
+
+  # 3. The Django Web Application
+  web:
+    build: .
+    container_name: ecom_django
+    # Use runserver for dev; we will switch to gunicorn in the Dockerfile for prod
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  # 4. Celery Worker (Processes the background tasks)
+  worker:
+    build: .
+    container_name: ecom_worker
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  # 5. Celery Beat (Schedules recurring tasks)
+  beat:
+    build: .
+    container_name: ecom_beat
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    restart: always
 
 volumes:
-  postgres_data: 
-  
+  postgres_data:
