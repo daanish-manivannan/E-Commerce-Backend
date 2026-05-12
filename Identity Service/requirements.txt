@@ -1,5 +1,9 @@
 fastapi
 uvicorn[standard]
-python-jose[cryptography]
+sqlalchemy
+psycopg2-binary
 passlib[bcrypt]
+bcrypt==4.0.1
+email-validator
 python-multipart
+python-jose[cryptography]  # <--- ADD THIS
