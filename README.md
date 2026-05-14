@@ -111,7 +111,25 @@ A **production-grade, scalable REST API** built using **Django**, **PostgreSQL**
 * System verification workflows
 
 ---
+## 🏗️ Architecture Phases (Post-Monolith)
 
+### Phase 8: Microservices Transition
+* **Service Splitting:** Segregated Identity (FastAPI) and Orders (Django).
+* **API Gateway:** Deployed **Nginx** for reverse proxying and path-based routing.
+
+### Phase 9: Inter-Service Data Sync
+* **Shadow User Pattern:** Automated provisioning of users in the Order DB during registration.
+* **Idempotent Sync:** Used `get_or_create` with `transaction.atomic()` to ensure consistency.
+* **Secure Handshake:** Established S2S authentication using internal secret headers.
+
+## 🔗 API Overview (via Gateway)
+* `POST /auth/register/` → User registration + auto-sync.
+* `POST /api/orders/` → Create new order (Auth Required).
+* `POST /api/orders/users/sync/` → **[Internal]** Shadow user provisioning.
+
+## ⭐ Architectural Strengths
+This project demonstrates mastery over **distributed systems**, specifically focusing on service discovery, Nginx path mapping, and maintaining cross-service data integrity.
+---
 ## ⚙️ Local Development Setup
 
 ### 1️⃣ Environment Variables
@@ -200,13 +218,7 @@ docker ps
 
 ---
 
-## 🧠 Architectural Strengths
 
-* 📌 **Use Case (UC)-based development** → structured, incremental delivery
-* 🔄 **TDD-first approach** → reliable & maintainable code
-* ⚡ **Async task delegation** → improved API performance
-* 🔐 **Secure payment workflows** → production-grade practices
-* 🐳 **Container-first design** → deployment-ready
 
 ---
 
