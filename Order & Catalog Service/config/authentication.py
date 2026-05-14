@@ -1,8 +1,9 @@
+import os
 from rest_framework import authentication, exceptions
 from jose import jwt, JWTError
 from django.contrib.auth import get_user_model # Correct import
 
-SECRET_KEY = "SUPER_SECRET_KEY_123" 
+SECRET_KEY = os.getenv("JWT_SECRET", "fallback_do_not_use_in_prod") 
 ALGORITHM = "HS256"
 
 # THIS IS THE MISSING LINE:

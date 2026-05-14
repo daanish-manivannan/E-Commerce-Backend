@@ -14,7 +14,7 @@ from jose import JWTError, jwt
 import os
 
 # Secrets should be in .env in a real app
-SECRET_KEY = "SUPER_SECRET_KEY_123" 
+SECRET_KEY = os.getenv("JWT_SECRET", "fallback_do_not_use_in_prod") 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

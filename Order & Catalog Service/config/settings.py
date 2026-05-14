@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,8 +26,35 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Add 'order_service' to the list so internal Docker calls are accepted
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'order_service', '0.0.0.0']
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'order_service', 'ecom_gateway']
 
+import os
+ALLOWED_HOSTS = ['*']  # For development only, replace with specific hosts in production
+# 1. Fallback Secret Key
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-build-mode-fallback')
+
+# 2. Add a check for "Build Mode"
+# This allows collectstatic to run without a real DB connection
+IS_BUILD_MODE = os.getenv('DB_IGNORE', 'False') == 'True'
+
+if IS_BUILD_MODE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+else:
+    # ... YOUR EXISTING POSTGRES DATABASES CONFIG HERE ...
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB'),
+            # ... etc
+        }
+    }
 
 # Application definition
 
@@ -166,7 +194,7 @@ from decouple import config
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
-SECRET_KEY = config('DJANGO_SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'

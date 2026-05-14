@@ -1,23 +1,89 @@
+import os
 import stripe
 import logging
 from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import viewsets, status
+from django.contrib.auth import get_user_model  # Added for Shadow User
+from rest_framework import viewsets, status, permissions  # Added permissions
+from rest_framework.views import APIView  # Added for Sync View
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db import transaction
 
 from .models import Order
 from .serializers import OrderSerializer
 
+# Get the User model dynamically
+User = get_user_model()
+
 # --- PRO LOGGING CONFIGURATION ---
-# This instance records success to the terminal and errors to the internal error.log
 logger = logging.getLogger(__name__)
 
 # Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+# --- SHADOW USER SYNC VIEW ---
+class UserSyncView(APIView):
+    """
+    Internal-only endpoint to sync users from the Identity Service.
+    Ensures a 'Shadow User' exists in the Django DB for order association.
+    """
+    # AllowAny because we use a custom X-Internal-Secret header for security
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        # 1. Security Handshake
+        internal_secret = request.headers.get("X-Internal-Secret")
+        expected_secret = os.getenv("SECRET_KEY")
+
+        if not internal_secret or internal_secret != expected_secret:
+            logger.warning("🚫 Unauthorized sync attempt: Secret mismatch or missing.")
+            return Response(
+                {"detail": "Unauthorized internal service call"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # 2. Data Extraction
+        email = request.data.get("email")
+        if not email:
+            return Response({"detail": "Email missing"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # 3. Database Operation (Wrapped in a transaction for safety)
+            with transaction.atomic():
+                # get_or_create handles the check and the save in one step
+                user, created = User.objects.get_or_create(email=email)
+                
+                if created:
+                    # Shadow users don't need passwords since they auth via FastAPI
+                    user.set_unusable_password()
+                    user.save()
+                    logger.info(f"✅ Created NEW Shadow User: {email} (ID: {user.id})")
+                else:
+                    logger.info(f"ℹ️ Shadow User already exists: {email} (ID: {user.id})")
+
+                # --- CRITICAL DEBUG LOGGING ---
+                # This will tell us if the DB Django is hitting is actually growing
+                current_count = User.objects.count()
+                logger.info(f"📊 Django Internal User Count: {current_count}")
+
+                return Response({
+                    "message": "User sync successful",
+                    "created": created,
+                    "id": user.id,
+                    "current_db_count": current_count
+                }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"❌ Critical Error during User Sync for {email}: {str(e)}")
+            return Response(
+                {"detail": "Internal database error during sync"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# --- ORDER MANAGEMENT VIEWSET ---
 class OrderViewSet(viewsets.ModelViewSet):
     """
     Standard API for managing orders. Includes a custom action
