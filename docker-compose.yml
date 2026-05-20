@@ -40,6 +40,7 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - "./Order & Catalog Service:/app"
+      - django_static:/app/static/
     ports:
       - "8000:8000"
     env_file:
@@ -111,9 +112,11 @@ services:
       - "80:80"
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf
+      - django_static:/app/static/:ro
     depends_on:
       - identity_service
       - order-service
     restart: always
 volumes:
   postgres_data:
+  django_static:

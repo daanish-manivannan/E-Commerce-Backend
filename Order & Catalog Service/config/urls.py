@@ -4,7 +4,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('products/', include('products.urls', namespace='products')),
+    # path('products/', include('products.urls', namespace='products')),
+
+    # FIX: Prepended 'api/' to keep catalog routing unified under Nginx
+    path('api/products/', include('products.urls', namespace='products')),
     
     # User App Endpoints
     path('api/users/', include('users.urls', namespace='users')),

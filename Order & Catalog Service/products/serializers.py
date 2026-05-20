@@ -1,18 +1,21 @@
 from rest_framework import serializers
 from .models import Category, Product
 
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = '__all__'
-
+# 1. DEFINE THIS FIRST
 class ProductSerializer(serializers.ModelSerializer):
-    # This automatically pulls the text name of the category, not just its ID!
-    category_name = serializers.ReadOnlyField(source='category.name')
+    category_name = serializers.CharField(source='category.name', read_only=True)
 
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'description', 'price', 'stock', 
-            'category', 'category_name', 'is_active', 'created_at'
+            'id', 'category', 'category_name', 'name', 
+            'description', 'price', 'stock', 'is_active'
         ]
+
+# 2. DEFINE THIS SECOND (Now it can safely reference ProductSerializer!)
+class CategorySerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'description', 'is_active', 'products']
