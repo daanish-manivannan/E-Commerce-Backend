@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,14 +25,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Moved to env
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-# Add 'order_service' to the list so internal Docker calls are accepted
-# ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'order_service', '0.0.0.0']
-# ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'order_service', 'ecom_gateway']
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 import os
 ALLOWED_HOSTS = ['*']  # For development only, replace with specific hosts in production
+
 # 1. Fallback Secret Key
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-build-mode-fallback')
 
@@ -47,12 +45,14 @@ if IS_BUILD_MODE:
         }
     }
 else:
-    # ... YOUR EXISTING POSTGRES DATABASES CONFIG HERE ...
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB'),
-            # ... etc
+            'NAME': os.getenv('POSTGRES_DB', 'ecom_db'),
+            'USER': os.getenv('POSTGRES_USER', 'ecom_user'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'ecom_password'),
+            'HOST': os.getenv('POSTGRES_HOST', 'db'),  # Matches the service name in docker-compose
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
         }
     }
 
@@ -66,7 +66,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # 3Rd Party Apps 
+    # 3rd Party Apps 
     'rest_framework',
     'rest_framework_simplejwt',
 
@@ -74,8 +74,6 @@ INSTALLED_APPS = [
     'products',
     'users',
     'orders',
-    
-    
 ]
 
 MIDDLEWARE = [
@@ -109,10 +107,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# Replace your old SQLite DATABASES with this
+# Database backup configuration fallback
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -123,6 +118,7 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -146,11 +142,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -158,6 +151,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -169,7 +163,7 @@ AUTH_USER_MODEL = 'users.CustomUser'
 # Django REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'config.authentication.JWTAuthentication', # Path to the file we just created
+        'config.authentication.JWTAuthentication',  # Path to your custom verification logic
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -182,24 +176,16 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
-# STRIPE SETTINGS
-# Note: In production, these MUST be moved to hidden environment variables!
 
-# Moved to env
-
-# From ENV
-from decouple import config
-
-# Replace your hardcoded keys with this:
+# STRIPE & ENVIRONMENT VARIABLES ENVIRONMENT TRACKING
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
 
-# STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Shared Microservices Encryption Secret (FastAPI Handoff)
+JWT_SECRET = os.getenv('JWT_SECRET', 'fallback_do_not_use_in_prod')
+
 
 # Logging Configuration
 LOGGING = {

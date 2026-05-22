@@ -4,9 +4,9 @@ import logging
 from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import get_user_model  # Added for Shadow User
-from rest_framework import viewsets, status, permissions  # Added permissions
-from rest_framework.views import APIView  # Added for Sync View
+from django.contrib.auth import get_user_model
+from rest_framework import viewsets, status, permissions
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,26 +15,18 @@ from django.db import transaction
 from .models import Order
 from .serializers import OrderSerializer
 
-# Get the User model dynamically
 User = get_user_model()
-
-# --- PRO LOGGING CONFIGURATION ---
 logger = logging.getLogger(__name__)
-
-# Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-# --- SHADOW USER SYNC VIEW ---
 class UserSyncView(APIView):
     """
     Internal-only endpoint to sync users from the Identity Service.
     Ensures a 'Shadow User' exists in the Django DB for order association.
     """
-    # AllowAny because we use a custom X-Internal-Secret header for security
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        # 1. Security Handshake
         internal_secret = request.headers.get("X-Internal-Secret")
         expected_secret = os.getenv("SECRET_KEY")
 
@@ -45,27 +37,21 @@ class UserSyncView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # 2. Data Extraction
         email = request.data.get("email")
         if not email:
             return Response({"detail": "Email missing"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # 3. Database Operation (Wrapped in a transaction for safety)
             with transaction.atomic():
-                # get_or_create handles the check and the save in one step
                 user, created = User.objects.get_or_create(email=email)
                 
                 if created:
-                    # Shadow users don't need passwords since they auth via FastAPI
                     user.set_unusable_password()
                     user.save()
                     logger.info(f"✅ Created NEW Shadow User: {email} (ID: {user.id})")
                 else:
                     logger.info(f"ℹ️ Shadow User already exists: {email} (ID: {user.id})")
 
-                # --- CRITICAL DEBUG LOGGING ---
-                # This will tell us if the DB Django is hitting is actually growing
                 current_count = User.objects.count()
                 logger.info(f"📊 Django Internal User Count: {current_count}")
 
@@ -83,7 +69,7 @@ class UserSyncView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-# --- ORDER MANAGEMENT VIEWSET ---
+
 class OrderViewSet(viewsets.ModelViewSet):
     """
     Standard API for managing orders. Includes a custom action
@@ -116,13 +102,13 @@ class OrderViewSet(viewsets.ModelViewSet):
                     'product_data': {
                         'name': item.product.name,
                     },
-                    'unit_amount': int(item.price * 100), 
+                    'unit_amount': int(item.price * 100), # Converts exact currency to integer cents
                 },
                 'quantity': item.quantity,
             })
 
         try:
-            # 3. Create Stripe Session
+            # 3. Create Clean Stripe Session 
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=line_items,
@@ -141,7 +127,6 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 # --- WEBHOOK HANDLING ---
-
 @csrf_exempt
 def stripe_webhook(request):
     """
@@ -152,7 +137,6 @@ def stripe_webhook(request):
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
     event = None
 
-    # 1. Verify Signature
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
@@ -164,7 +148,7 @@ def stripe_webhook(request):
         logger.error(f"❌ Webhook Error: Signature Verification Failed - {e}")
         return HttpResponse(status=400)
 
-    # 2. Process Business Logic
+    # Process Business Logic
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         order_id = session.get('client_reference_id')
@@ -172,7 +156,6 @@ def stripe_webhook(request):
         if order_id:
             try:
                 order = Order.objects.get(id=order_id)
-                # Only update if pending to prevent race conditions
                 if order.status == 'pending':
                     order.status = 'paid'
                     order.save()
@@ -188,5 +171,4 @@ def stripe_webhook(request):
         session = event['data']['object']
         logger.warning(f"🚨 Payment Failed event received for Session {session.get('id')}")
 
-    # Always return 200 to Stripe
     return HttpResponse(status=200)

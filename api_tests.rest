@@ -1,0 +1,45 @@
+### 1. Variables Definition
+# @baseUrl = http://localhost/api
+
+@baseUrl = http://127.0.0.1/api
+@contentType = application/json
+
+### 2. Authenticate & Obtain JWT Token
+# @name login
+POST {{baseUrl}}/token/
+Content-Type: {{contentType}}
+
+{
+    "email": "daanish@test.com",
+    "password": "P@ssword"
+}
+
+### Extract the JWT Token dynamically from the login response
+@authToken = {{login.response.body.access}}
+
+### 3. Fetch Public Product Catalog
+GET {{baseUrl}}/products/items/
+Content-Type: {{contentType}}
+
+### 4. Create a New Order (Requires Auth Token)
+# @name createOrder
+POST {{baseUrl}}/orders/
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+    "items": [
+        {"product": 1, "quantity": 2},
+        {"product": 5, "quantity": 1}
+    ]
+}
+
+### Extract the generated Order ID dynamically from the response
+@orderId = {{createOrder.response.body.id}}
+
+### 5. Generate Stripe Checkout Session Link
+POST {{baseUrl}}/orders/{{orderId}}/create-checkout-session/
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{}

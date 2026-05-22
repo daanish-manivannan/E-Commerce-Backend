@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # --- SHARED INFRASTRUCTURE ---
   db:
@@ -24,7 +26,6 @@ services:
     ports:
       - "6379:6379"
     restart: always
-    
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
       interval: 10s
@@ -45,8 +46,6 @@ services:
       - "8000:8000"
     env_file:
       - .env
-    environment:
-      - SECRET_KEY=${SHARED_JWT_SECRET} # Injected from .env
     depends_on:
       db:
         condition: service_healthy
@@ -63,7 +62,8 @@ services:
     env_file:
       - .env
     environment:
-      - SECRET_KEY=${SHARED_JWT_SECRET}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
     depends_on:
       db:
         condition: service_healthy
@@ -80,7 +80,8 @@ services:
     env_file:
       - .env
     environment:
-      - SECRET_KEY=${SHARED_JWT_SECRET}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
     depends_on:
       db:
         condition: service_healthy
@@ -100,11 +101,12 @@ services:
       - "./Identity Service:/app"
     environment:
       - DATABASE_URL=postgresql://ecom_user:ecom_password@db:5432/ecom_db
-      - JWT_SECRET=${SHARED_JWT_SECRET} # Injected from .env
+      - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
     depends_on:
       db:
         condition: service_healthy
     restart: always
+
   gateway:
     image: nginx:latest
     container_name: ecom_gateway
@@ -117,6 +119,7 @@ services:
       - identity_service
       - order-service
     restart: always
+
 volumes:
   postgres_data:
   django_static:
