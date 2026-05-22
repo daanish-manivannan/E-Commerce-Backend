@@ -1,8 +1,8 @@
-import os
 import httpx
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import engine, get_db
+from decouple import config  # 🔐 Swapped os.getenv for decouple
 
 # Import your local modules
 import models
@@ -13,10 +13,6 @@ import auth_utils
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Identity Service")
-
-# Internal URL for the Order Service (Shadow User Sync)
-# 'order_service' matches the service name in docker-compose.yml
-# ORDER_SERVICE_SYNC_URL = "http://order-service:8000/api/users/sync/"
 
 # MUST include /orders/ in the path now
 ORDER_SERVICE_SYNC_URL = "http://order-service:8000/api/orders/users/sync/"
@@ -53,11 +49,15 @@ async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get
     # 3. --- SHADOW USER SYNC (Service-to-Service) ---
     async with httpx.AsyncClient() as client:
         try:
+            # 🔐 Safely load the secret using python-decouple
+            cluster_secret = config("INTERNAL_CLUSTER_SECRET", default="fallback_dev_only_key")
+
             # We send the request to Django's internal sync endpoint
             sync_response = await client.post(
                 ORDER_SERVICE_SYNC_URL,
                 json={"email": user_data.email},
-                headers={"X-Internal-Secret": os.getenv("JWT_SECRET")},
+                # 🚨 FIXED: Sending the isolated cluster passcode instead of sensitive JWT_SECRET
+                headers={"X-Internal-Secret": cluster_secret},
                 timeout=5.0
             )
             

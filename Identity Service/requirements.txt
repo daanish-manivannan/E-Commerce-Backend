@@ -8,3 +8,4 @@ email-validator
 python-multipart
 python-jose[cryptography]
 httpx
+python-decouple==3.8

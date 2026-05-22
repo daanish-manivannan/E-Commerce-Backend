@@ -103,6 +103,8 @@ services:
       - "8001"
     volumes:
       - "./Identity Service:/app"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql://ecom_user:ecom_password@db:5432/ecom_db
       - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
