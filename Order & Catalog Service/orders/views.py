@@ -14,6 +14,8 @@ from django.db import transaction
 
 from .models import Order
 from .serializers import OrderSerializer
+# 🚨 IMPORT THE COMBINED PIPELINE BACKGROUND TASK
+from .tasks import fulfill_and_send_invoice_task
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -52,15 +54,15 @@ class UserSyncView(APIView):
                 else:
                     logger.info(f"ℹ️ Shadow User already exists: {email} (ID: {user.id})")
 
-                current_count = User.objects.count()
-                logger.info(f"📊 Django Internal User Count: {current_count}")
+            current_count = User.objects.count()
+            logger.info(f"📊 Django Internal User Count: {current_count}")
 
-                return Response({
-                    "message": "User sync successful",
-                    "created": created,
-                    "id": user.id,
-                    "current_db_count": current_count
-                }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+            return Response({
+                "message": "User sync successful",
+                "created": created,
+                "id": user.id,
+                "current_db_count": current_count
+            }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"❌ Critical Error during User Sync for {email}: {str(e)}")
@@ -72,14 +74,27 @@ class UserSyncView(APIView):
 
 class OrderViewSet(viewsets.ModelViewSet):
     """
-    Standard API for managing orders. Includes a custom action
-    to initiate the Stripe Checkout process.
+    Standard API for managing orders. Includes automated background 
+    fulfillment queues and a custom action to initiate Stripe Checkout.
     """
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user).order_by('-created_at')
+
+    # 🚨 HOOKING INTO ORDER CREATION TO TRIGGER ASYNC PROCESSING
+    def perform_create(self, serializer):
+        """
+        Overrides the standard model save process. 
+        Saves the database entry and handshakes off to Celery instantly.
+        """
+        # 1. Save the record to the database (Status defaults to 'pending')
+        order = serializer.save()
+        logger.info(f"📦 Order #{order.id} saved locally. Offloading async validation to Redis...")
+
+        # 2. Fire the combined worker pipeline entirely out-of-process
+        fulfill_and_send_invoice_task.delay(order.id)
 
     @action(detail=True, methods=['post'], url_path='create-checkout-session')
     def create_checkout_session(self, request, pk=None):
@@ -102,7 +117,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     'product_data': {
                         'name': item.product.name,
                     },
-                    'unit_amount': int(item.price * 100), # Converts exact currency to integer cents
+                    'unit_amount': int(item.price * 100), # Converts dollar integers to cents
                 },
                 'quantity': item.quantity,
             })

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 from .models import Order, OrderItem
 from products.models import Product
-from .tasks import generate_invoice_and_send_email
+from .tasks import fulfill_and_send_invoice_task
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
@@ -57,6 +57,6 @@ class OrderSerializer(serializers.ModelSerializer):
                 
         # 📌 4. BACKGROUND TASKS (Triggered only AFTER transaction safely commits)
         # We pass it to Celery. .delay() drops a message straight into Redis!
-        transaction.on_commit(lambda: generate_invoice_and_send_email.delay(order.id))
+        transaction.on_commit(lambda: fulfill_and_send_invoice_task.delay(order.id))
         
         return order

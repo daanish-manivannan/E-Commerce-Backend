@@ -456,7 +456,7 @@ Flow:
 Current task:
 
 ```text
-generate_invoice_and_send_email(order_id)
+fulfill_and_send_invoice_task(order_id)
 ```
 
 Simple explanation:
