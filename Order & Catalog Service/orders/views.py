@@ -93,8 +93,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = serializer.save()
         logger.info(f"📦 Order #{order.id} saved locally. Offloading async validation to Redis...")
 
-        # 2. Fire the combined worker pipeline entirely out-of-process
-        fulfill_and_send_invoice_task.delay(order.id)
+        # # 2. Fire the combined worker pipeline entirely out-of-process
+        # fulfill_and_send_invoice_task.delay(order.id)
 
     @action(detail=True, methods=['post'], url_path='create-checkout-session')
     def create_checkout_session(self, request, pk=None):
