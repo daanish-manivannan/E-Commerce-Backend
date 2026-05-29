@@ -1,54 +1,74 @@
 import os
+import jwt
+import json
+import base64
 from rest_framework import authentication, exceptions
-from jose import jwt, JWTError
 from django.contrib.auth import get_user_model
 
-# 1. Load the shared secret key directly from the container's environment variables
-SECRET_KEY = os.getenv("JWT_SECRET", "fallback_do_not_use_in_prod") 
-ALGORITHM = "HS256"
-
-# 2. Reference the active CustomUser model configured in your settings
+# Reference the active CustomUser model configured in your settings
 User = get_user_model()
 
-class JWTAuthentication(authentication.BaseAuthentication):
+class KongJWTAuthentication(authentication.BaseAuthentication):
+    """
+    Authenticate using JWT token from Authorization header.
+    Supports both:
+    1. X-User-Email/X-User-Id headers (from Kong request-transformer)
+    2. Bearer token in Authorization header (verified by Kong, decoded by Django)
+    """
+    
     def authenticate(self, request):
-        # 3. Extract the raw Authorization header string from request metadata
-        auth_header = request.META.get('HTTP_AUTHORIZATION')
-        if not auth_header:
-            return None
-
-        try:
-            # 4. Split 'Bearer <token>' safely to capture only the cryptographic string
-            header_parts = auth_header.split(' ')
-            if len(header_parts) != 2 or header_parts[0].lower() != 'bearer':
-                return None
-            
-            token = header_parts[1]
-            
-            # 5. Decode and verify the signature using the shared secret and algorithm
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            
-            # 6. Extract the unique email string from the token's 'sub' claim
-            email = payload.get("sub")
-            if not email:
-                raise exceptions.AuthenticationFailed('Token payload is missing the identity claim ("sub")')
-
-            # 7. Match against the synchronized shadow profile database record
-            user, _ = User.objects.get_or_create(email=email)
-            
-            # Return the authenticated user instance to DRF to populate request.user
-            return (user, None)
-
-        # except (JWTError, IndexError):
-        #     # Any signature verification failure, tampering, or expiration lands here
-        #     raise exceptions.AuthenticationFailed('Invalid or expired token')
+        # Try 1: Read headers injected by Kong request-transformer
+        email = request.META.get('HTTP_X_USER_EMAIL')
+        user_id = request.META.get('HTTP_X_USER_ID')
         
-        except JWTError as e:
-            # 🚨 This prints the EXACT cryptographic error to your terminal logs!
-            print(f"--- JWT DECODE ERROR: {str(e)} ---")
-            raise exceptions.AuthenticationFailed(f'JWT Decode Failed: {str(e)}')
+        if email:
+            # Kong already processed the JWT and added headers
+            try:
+                user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={'id': user_id} if user_id else {}
+                )
+                return (user, None)
+            except Exception as e:
+                raise exceptions.AuthenticationFailed(f'Auth error: {str(e)}')
+        
+        # Try 2: Parse JWT from Authorization header
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not auth_header.startswith('Bearer '):
+            return None  # No auth provided
+        
+        # 🛡️ GATEWAY VERIFICATION CHECK: Enforce that Kong was the one who validated this token.
+        # Kong's JWT plugin sets X-Consumer-Username to the consumer's username (identity-service)
+        # upon successful JWT signature and expiration verification.
+        consumer_username = request.META.get('HTTP_X_CONSUMER_USERNAME')
+        if not consumer_username or consumer_username != 'identity-service':
+            raise exceptions.AuthenticationFailed('Access denied: Request must be authenticated by the Kong gateway.')
             
+        try:
+            # Extract token
+            token = auth_header[7:]  # Remove 'Bearer ' prefix
+            
+            # Decode JWT without verification first to get claims
+            # (We've already verified the signature via Kong's edge validation)
+            decoded = jwt.decode(token, options={"verify_signature": False})
+            
+            email = decoded.get('sub')  # 'sub' claim contains email
+            user_id = decoded.get('user_id')
+            
+            if not email:
+                raise exceptions.AuthenticationFailed('No email in token')
+            
+            # Create or get user
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={'id': user_id} if user_id else {}
+            )
+            
+            return (user, None)
+            
+        except jwt.DecodeError:
+            raise exceptions.AuthenticationFailed('Invalid token format')
         except Exception as e:
-            # 🚨 This catches database, configuration, or structural coding faults!
-            print(f"--- SYSTEM AUTHENTICATION ERROR: {str(e)} ---")
-            raise exceptions.AuthenticationFailed(f'Internal Auth System Error: {str(e)}')
+            raise exceptions.AuthenticationFailed(f'Auth error: {str(e)}')
+
+        

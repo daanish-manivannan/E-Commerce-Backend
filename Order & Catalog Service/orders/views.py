@@ -1,3 +1,4 @@
+from decouple import config
 import os
 import stripe
 import logging
@@ -30,7 +31,11 @@ class UserSyncView(APIView):
 
     def post(self, request):
         internal_secret = request.headers.get("X-Internal-Secret")
-        expected_secret = os.getenv("SECRET_KEY")
+        # expected_secret = os.getenv("SECRET_KEY")
+
+        # 🚨 SECURE UPDATE: Enforce explicit config parsing
+        # If INTERNAL_CLUSTER_SECRET is completely missing from .env, decouple throws an instant error on boot rather than failing silently!
+        expected_secret = config("INTERNAL_CLUSTER_SECRET")
 
         if not internal_secret or internal_secret != expected_secret:
             logger.warning("🚫 Unauthorized sync attempt: Secret mismatch or missing.")

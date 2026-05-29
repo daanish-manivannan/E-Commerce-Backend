@@ -42,10 +42,10 @@ services:
     volumes:
       - "./Order & Catalog Service:/app"
       - django_static:/app/static/
-    # ports:
-    #   - "8000:8000"
     expose:
       - "8000"
+    # ports:
+    #   - "8000:8000"  # Expose Django's internal port 8000 to the host for direct access (optional, can be removed if only accessed via Kong)
     env_file:
       - .env
     depends_on:
@@ -65,7 +65,7 @@ services:
       - .env
     environment:
       - SECRET_KEY=${SECRET_KEY}
-      - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       db:
         condition: service_healthy
@@ -83,7 +83,7 @@ services:
       - .env
     environment:
       - SECRET_KEY=${SECRET_KEY}
-      - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       db:
         condition: service_healthy
@@ -97,8 +97,6 @@ services:
       context: "./Identity Service"
       dockerfile: Dockerfile
     container_name: ecom_identity
-    # ports:
-    #   - "8001:8001"
     expose:
       - "8001"
     volumes:
@@ -107,20 +105,29 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://ecom_user:ecom_password@db:5432/ecom_db
-      - JWT_SECRET=${JWT_SECRET}  # 🚨 FIX: Align from SHARED_JWT_SECRET to JWT_SECRET
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       db:
         condition: service_healthy
     restart: always
 
+  # --- KONG API GATEWAY ---
+  # Replaced Nginx to support edge-level Centralized JWT Verification for free
   gateway:
-    image: nginx:latest
+    image: kong:3.4
     container_name: ecom_gateway
+    environment:
+      KONG_DATABASE: "off"                             # Force Kong into DB-less/Declarative mode
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml # Target mount path inside the container
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "off"                         # Lock down Admin API from external access
+    env_file:
+      - .env
     ports:
-      - "80:80"
+      - "8080:8000"                                      # Proxy external port 80 requests into Kong's internal port 8000
     volumes:
-      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf
-      - django_static:/app/static/:ro
+      - ./gateway/kong.yml:/usr/local/kong/kong.yml:ro
     depends_on:
       - identity_service
       - order-service
@@ -129,3 +136,18 @@ services:
 volumes:
   postgres_data:
   django_static:
+
+# PREVIOUS NGINX CONFIGURATION
+
+#  gateway:
+#    image: nginx:latest
+#    container_name: ecom_gateway
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf
+#      - django_static:/app/static/:ro
+#    depends_on:
+#      - identity_service
+#      - order-service
+#    restart: always

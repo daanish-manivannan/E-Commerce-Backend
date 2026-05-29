@@ -1,0 +1,73 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  # --- IDENTITY SERVICE (FastAPI) ---
+  - name: identity-service
+    url: http://identity_service:8001
+    routes:
+      - name: identity-routes
+        paths:
+          - /api/auth
+        strip_path: true
+
+  # --- ORDER & CATALOG SERVICE (Django) ---
+  - name: order-service
+    url: http://order-service:8000
+    routes:
+      - name: order-webhook-route
+        # Public webhook for Stripe callbacks (no authentication)
+        paths:
+          - /api/orders/webhook
+        strip_path: false
+
+      - name: products-public-route
+        # Public catalog route (no authentication)
+        paths:
+          - /api/products
+        strip_path: false
+
+      - name: token-public-route
+        paths:
+          - /api/token
+        strip_path: false
+
+      - name: orders-protected-route
+        # Protected route for creating and retrieving orders
+        paths:
+          - /api/orders
+        strip_path: false
+        plugins:
+          # 🔐 ADDED: Verify Bearer JWT tokens at the gateway level
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+      - name: orders-legacy-checkout-route
+        # ⚡ ADDED: Support the URL structure from API Spec Ecom.yaml (/orders/{{orderId}}/create-checkout-session/)
+        # Using a regex capture group to capture the remaining path segment
+        paths:
+          - ~/orders/(?<checkout_path>.*)
+        strip_path: false
+        plugins:
+          # 🔐 Verify JWT token before routing
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+          # 🔄 Rewrite path to include '/api/orders/' (e.g. /orders/1/create-checkout-session/ -> /api/orders/1/create-checkout-session/)
+          - name: request-transformer
+            config:
+              replace:
+                uri: "/api/orders/$(uri_captures['checkout_path'])"
+
+# 🔐 DECLARATIVE AUTHENTICATION CREDENTIALS
+# We define our consumer identity-service and its corresponding JWT key/secret pair.
+consumers:
+  - username: identity-service
+    jwt_secrets:
+      - key: "ecom_identity_v1"
+        # 🔐 Hardcoded JWT secret matching the environment JWT_SECRET value
+        secret: "10633b0564498e9d489b479d8e52a5bb75f4ecf68bc6f0bd6b57cbd4f4e070b9"
+        algorithm: HS256

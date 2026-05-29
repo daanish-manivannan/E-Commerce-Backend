@@ -1,0 +1,238 @@
+openapi: 3.0.0
+info:
+  title: API Spec Ecom
+  version: 1.0.0
+paths:
+  /api/orders/:
+    post:
+      summary: Create a New Order
+      operationId: >-
+        c_users_daani_onedrive_documents_bruno_e-commerce_microservices_architecture_3_order_checkout_engine_create_a_new_order_yml
+      description: >-
+        Initiates an authenticated atomic row-locking checkout process. Verifies
+        stock, reduces catalog state, snapshots unit cost, and maps the order
+        layout to the logged-in user profile.
+      tags:
+        - 3. Order & Checkout Engine
+      responses:
+        '200':
+          description: ''
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          schema:
+            type: string
+          example: '{{contentType}}'
+      requestBody:
+        $ref: '#/components/requestBodies/create_a_new_order'
+      security:
+        - create_a_new_order: []
+      servers:
+        - url: http://127.0.0.1:8080
+  /orders/{{orderId}}/create-checkout-session/:
+    post:
+      summary: Generate Stripe Checkout Session Link
+      operationId: >-
+        c_users_daani_onedrive_documents_bruno_e-commerce_microservices_architecture_3_order_checkout_engine_generate_stripe_checkout_session_link_yml
+      description: >-
+        Compiles snapshotted order values into integer cents and coordinates
+        with Stripe to fetch a secure payment checkout routing portal page link.
+      tags:
+        - 3. Order & Checkout Engine
+      responses:
+        '200':
+          description: ''
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          schema:
+            type: string
+          example: '{{contentType}}'
+      requestBody:
+        $ref: '#/components/requestBodies/generate_stripe_checkout_session_link'
+      security:
+        - generate_stripe_checkout_session_link: []
+      servers:
+        # Added server mapping for Bruno import compatibility
+        - url: http://127.0.0.1:8080
+  /api/orders:
+    get:
+      summary: Fetch Public Orders Catalog
+      operationId: >-
+        c_users_daani_onedrive_documents_bruno_e-commerce_microservices_architecture_2_product_catalog_service_fetch_public_orders_catalog_yml
+      description: >-
+        Public unauthenticated route to view all inventory lines, pricing
+        matrices, and categories directly from the catalog engine database.
+      tags:
+        - 2. Product Catalog Service
+      responses:
+        '200':
+          description: ''
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          schema:
+            type: string
+          example: '{{contentType}}'
+      security:
+        - fetch_public_orders_catalog: []
+      servers:
+        - url: http://127.0.0.1:8080
+  /api/products/items/:
+    get:
+      summary: Fetch Public Product Catalog
+      operationId: >-
+        c_users_daani_onedrive_documents_bruno_e-commerce_microservices_architecture_2_product_catalog_service_fetch_public_product_catalog_yml
+      description: >-
+        Public unauthenticated route to view all inventory lines, pricing
+        matrices, and categories directly from the catalog engine database.
+      tags:
+        - 2. Product Catalog Service
+      responses:
+        '200':
+          description: ''
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          schema:
+            type: string
+          example: '{{contentType}}'
+      security: []
+      servers:
+        - url: http://127.0.0.1:8080
+  /api/auth/login:
+    post:
+      summary: Authenticate & Obtain JWT Token
+      operationId: >-
+        c_users_daani_onedrive_documents_bruno_e-commerce_microservices_architecture_1_authentication_security_authenticate_obtain_jwt_token_yml
+      description: >-
+        Submits user credentials to exchange for an access and refresh JWT token
+        pair. Automatically extracts and persists the bearer token for
+        subsequent queries.
+      tags:
+        - 1. Authentication & Security
+      responses:
+        '200':
+          description: ''
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          schema:
+            type: string
+          example: '{{contentType}}'
+      requestBody:
+        $ref: '#/components/requestBodies/authenticate_obtain_jwt_token'
+      servers:
+        - url: http://127.0.0.1:8080
+  /api/auth/register:
+    post:
+      summary: 'Register New User '
+      operationId: >-
+        c_users_daani_onedrive_documents_bruno_e-commerce_microservices_architecture_1_authentication_security_register_new_user_yml
+      description: ''
+      tags:
+        - 1. Authentication & Security
+      responses:
+        '200':
+          description: ''
+      requestBody:
+        $ref: '#/components/requestBodies/register_new_user'
+      servers:
+        - url: http://127.0.0.1:8080
+servers:
+  - url: http://127.0.0.1:8080
+components:
+  schemas:
+    create_a_new_order:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product:
+                type: integer
+              quantity:
+                type: integer
+      example:
+        items:
+          - product: 1
+            quantity: 1
+          - product: 5
+            quantity: 2
+    generate_stripe_checkout_session_link:
+      type: object
+      example: {}
+    authenticate_obtain_jwt_token:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      example:
+        email: '{{apiTestEmail}}'
+        password: '{{apiTestPassword}}'
+    register_new_user:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      example:
+        email: '{{apiTestEmail}}'
+        password: '{{apiTestPassword}}'
+  requestBodies:
+    create_a_new_order:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/create_a_new_order'
+      description: ''
+      required: true
+    generate_stripe_checkout_session_link:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/generate_stripe_checkout_session_link'
+      description: ''
+      required: true
+    authenticate_obtain_jwt_token:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/authenticate_obtain_jwt_token'
+      description: ''
+      required: true
+    register_new_user:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/register_new_user'
+      description: ''
+      required: true
+  securitySchemes:
+    create_a_new_order:
+      type: http
+      scheme: bearer
+    generate_stripe_checkout_session_link:
+      type: http
+      scheme: bearer
+    fetch_public_orders_catalog:
+      type: http
+      scheme: bearer
+    fetch_public_product_catalog:
+      type: http
+      scheme: bearer

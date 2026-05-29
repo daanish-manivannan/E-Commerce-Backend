@@ -163,7 +163,9 @@ AUTH_USER_MODEL = 'users.CustomUser'
 # Django REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'config.authentication.JWTAuthentication',  # Path to your custom verification logic
+        # 'config.authentication.JWTAuthentication',  # Path to your custom verification logic
+        # 🔄 UPDATED: Point to the new class name we built for Kong headers
+        'config.authentication.KongJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',

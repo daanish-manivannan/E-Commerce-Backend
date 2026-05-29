@@ -1,0 +1,5 @@
+unknown shorthand flag: 'q' in -q)
+
+Usage:  docker kill [OPTIONS] CONTAINER [CONTAINER...]
+
+Run 'docker kill --help' for more information

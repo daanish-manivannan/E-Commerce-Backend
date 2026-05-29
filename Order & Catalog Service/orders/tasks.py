@@ -17,13 +17,10 @@ def fulfill_and_send_invoice_task(order_id):
         # Fetch the order from the database inside the worker process
         order = Order.objects.get(id=order_id)
         
-        # Advance the order state out-of-process if it hasn't been handled yet
-        if order.status == 'pending':
-            order.status = 'completed'
-            order.save()
-            print(f"[CELERY] SUCCESS: Order {order_id} status updated to COMPLETED.")
-        else:
-            print(f"[CELERY] Info: Order {order_id} already has status: {order.status}")
+        # 🚨 FIX: Do not change order status to 'completed' here.
+        # Fulfilling the order should keep it as 'pending' until Stripe payment changes it to 'paid'.
+        # 'completed' is also not a valid status in Order.STATUS_CHOICES.
+        print(f"[CELERY] INFO: Processing invoice for Order {order_id} (Current status: {order.status}).")
 
         # --- HEAVY ASYNC PROCESSING WORKLOAD ---
         print(f"[CELERY] Simulating heavy 5-second invoice generation and email dispatch...")

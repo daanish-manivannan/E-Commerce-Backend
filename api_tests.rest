@@ -1,43 +1,68 @@
 ### 1. Variables Definition
-# @baseUrl = http://localhost/api
-
-@baseUrl = http://127.0.0.1/api
+# Kong Gateway Host on port 8080
+@baseUrl = http://127.0.0.1:8080
 @contentType = application/json
 
-### 2. Authenticate & Obtain JWT Token
-# @name login
-POST {{baseUrl}}/token/
+# Test user credentials (matches .env)
+@apiTestEmail = daanish@test.com
+@apiTestPassword = P@ssword
+
+
+### 2. Register New User (FastAPI Identity Service)
+# This will also sync the shadow user inside Django's DB.
+# If the user is already registered, this might return a 400.
+# @name register
+POST {{baseUrl}}/api/auth/register
 Content-Type: {{contentType}}
 
 {
-    "email": "daanish@test.com",
-    "password": "P@ssword"
+    "email": "{{apiTestEmail}}",
+    "password": "{{apiTestPassword}}"
 }
 
-### Extract the JWT Token dynamically from the login response
-@authToken = {{login.response.body.access}}
 
-### 3. Fetch Public Product Catalog
-GET {{baseUrl}}/products/items/
+### 3. Authenticate & Obtain JWT Token (FastAPI Identity Service via Kong)
+# @name login
+POST {{baseUrl}}/api/auth/login
 Content-Type: {{contentType}}
 
-### 4. Create a New Order (Requires Auth Token)
+{
+    "email": "{{apiTestEmail}}",
+    "password": "{{apiTestPassword}}"
+}
+
+
+### Extract the JWT Token dynamically from the login response (FastAPI uses access_token)
+@authToken = {{login.response.body.access_token}}
+
+
+### 4. Fetch Public Product Catalog
+# Unauthenticated route (Allowed directly)
+GET {{baseUrl}}/api/products/items/
+Content-Type: {{contentType}}
+
+
+### 5. Create a New Order (Requires Auth Token)
+# Protected route (Validated by Kong, user parsed by Django)
 # @name createOrder
-POST {{baseUrl}}/orders/
+POST {{baseUrl}}/api/orders/
 Authorization: Bearer {{authToken}}
 Content-Type: {{contentType}}
 
 {
     "items": [
-        {"product": 1, "quantity": 2},
-        {"product": 5, "quantity": 1}
+        {"product": 1, "quantity": 1},
+        {"product": 5, "quantity": 2}
     ]
 }
+
 
 ### Extract the generated Order ID dynamically from the response
 @orderId = {{createOrder.response.body.id}}
 
-### 5. Generate Stripe Checkout Session Link
+
+### 6. Generate Stripe Checkout Session Link (Requires Auth Token)
+# Legacy path from the API Spec (/orders/{{orderId}}/create-checkout-session/)
 POST {{baseUrl}}/orders/{{orderId}}/create-checkout-session/
 Authorization: Bearer {{authToken}}
 Content-Type: {{contentType}}

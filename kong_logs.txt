@@ -1,0 +1,572 @@
+2026/05/28 06:50:38 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:38 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:50:41 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:42 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:50:43 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:44 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:50:45 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:46 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:50:47 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:48 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:50:51 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:51 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:50:55 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:50:56 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:51:03 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:51:03 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:51:19 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:51:19 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:51:47 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:51:48 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:52:42 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:52:42 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:53:46 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:53:47 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:54:51 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:54:51 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:55:57 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:55:57 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:57:02 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:57:02 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:58:06 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:58:07 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 06:59:11 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 06:59:11 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 07:00:15 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 07:00:16 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 07:01:20 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 07:01:21 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 07:02:25 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 07:02:25 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 07:03:30 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 07:03:30 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+2026/05/28 07:04:34 [warn] 1#0: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /usr/local/kong/nginx.conf:7
+2026/05/28 07:04:35 [error] 1#0: init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk
+nginx: [error] init_by_lua error: /usr/local/share/lua/5.1/kong/init.lua:652: error parsing declarative config file /usr/local/kong/kong.yml:
+in 'services':
+  - in entry 2 of 'services':
+    in 'routes':
+      - in entry 4 of 'routes':
+        in 'plugins':
+          - in entry 1 of 'plugins':
+            in 'run_on': unknown field
+stack traceback:
+	[C]: in function 'error'
+	/usr/local/share/lua/5.1/kong/init.lua:652: in function 'init'
+	init_by_lua:3: in main chunk

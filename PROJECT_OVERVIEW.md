@@ -1,57 +1,95 @@
 # E-Commerce Backend Project Overview
 
-This project is an ecommerce backend built with a small microservice-style architecture.
+This project is a containerized ecommerce backend built with a small microservice-style architecture.
 
 In simple terms:
 
-**FastAPI handles login and registration. Django handles products, orders, payments, admin, and business logic. PostgreSQL stores the data. Redis and Celery handle background jobs. Stripe handles payments. Nginx acts as the front door.**
+**FastAPI owns identity and JWT creation. Kong is now the public API gateway and verifies JWTs at the edge. Django handles catalog, orders, payments, admin, and ecommerce business logic. PostgreSQL stores data. Redis and Celery handle background jobs. Stripe handles checkout.**
 
 ---
 
 # 1. High-Level Architecture
 
 ```text
-Client / Frontend
+Client / API Tester / Frontend
       |
       v
-Nginx Gateway :80
+Kong API Gateway
+Host: 127.0.0.1:8080
       |
-      |-- /auth/*  -> FastAPI Identity Service :8001
+      |-- /api/auth/*      -> FastAPI Identity Service :8001
       |
-      |-- /api/*   -> Django Order & Catalog Service :8000
+      |-- /api/products/*  -> Django Order & Catalog Service :8000
       |
-      |-- /admin/* -> Django Admin
+      |-- /api/orders/*    -> Django Order & Catalog Service :8000
               |
               v
         PostgreSQL Database
               |
               v
-        Redis + Celery Workers
+        Redis + Celery Worker / Beat
 ```
+
+Kong has replaced the active Nginx gateway in `docker-compose.yml`. The old Nginx configuration is still present/commented as previous configuration, but the running gateway service is Kong.
 
 ---
 
 # 2. Main Services
 
-## Nginx Gateway
+## Kong API Gateway
 
-File:
-
-```text
-gateway/nginx.conf
-```
-
-Nginx receives incoming requests and forwards them to the correct backend service.
-
-Current routing:
+Files:
 
 ```text
-/auth/  -> Identity Service
-/api/   -> Order & Catalog Service
-/admin/ -> Django Admin
+docker-compose.yml
+gateway/kong.yml
 ```
 
-So the client does not need to know which backend service handles what. It talks to one gateway.
+Kong is running in DB-less/declarative mode.
+
+Current gateway behavior:
+
+```text
+External port:
+  8080
+
+Internal Kong proxy port:
+  8000
+
+Admin API:
+  disabled
+```
+
+Current Kong routes:
+
+```text
+/api/auth
+  -> FastAPI identity_service:8001
+
+/api/products
+  -> Django order-service:8000, public catalog route
+
+/api/orders/webhook
+  -> Django order-service:8000, public Stripe webhook route
+
+/api/orders
+  -> Django order-service:8000, JWT-protected order route
+
+/orders/*
+  -> Django order-service:8000, JWT-protected legacy checkout compatibility route
+
+/api/token
+  -> Django order-service:8000, SimpleJWT compatibility route
+```
+
+Kong plugins on protected order-service routes:
+
+```text
+jwt
+  -> Verifies JWT signature and expiration before request reaches Django.
+```
+
+The gateway is now responsible for edge-level authentication on the configured order-service routes.
 
 ---
 
@@ -66,24 +104,27 @@ Identity Service/
 Technology:
 
 ```text
-FastAPI + SQLAlchemy + PostgreSQL + JWT
+FastAPI + SQLAlchemy + PostgreSQL + bcrypt + JWT + python-decouple
 ```
 
 Purpose:
 
 ```text
-Handles user registration, login, password hashing, and JWT token creation.
+Handles user registration, password hashing, login, JWT creation, and shadow-user sync with Django.
 ```
 
 Important files:
 
 ```text
 main.py        -> FastAPI routes
-models.py      -> Identity user database model
-schemas.py     -> Request/response validation
-auth_utils.py  -> Password hashing and JWT creation
-database.py    -> Database connection
+models.py      -> SQLAlchemy identity user model
+schemas.py     -> Pydantic request/response schemas
+auth_utils.py  -> bcrypt password hashing and Kong-compatible JWT creation
+database.py    -> SQLAlchemy database connection/session
+Dockerfile     -> FastAPI container setup
 ```
+
+The identity service stores real login credentials in the `identity_users` table.
 
 ---
 
@@ -98,22 +139,22 @@ Order & Catalog Service/
 Technology:
 
 ```text
-Django + Django REST Framework + PostgreSQL + Celery + Stripe
+Django + Django REST Framework + PostgreSQL + Celery + Redis + Stripe + WhiteNoise
 ```
 
 Purpose:
 
 ```text
-Handles products, categories, users inside Django, orders, stock deduction, Stripe checkout, webhooks, admin, and async invoice/email jobs.
+Handles catalog APIs, Django users, order creation, stock control, Stripe checkout, Stripe webhooks, Django admin, static files, and async order processing.
 ```
 
 Important apps:
 
 ```text
-users/     -> Django custom user / shadow user
-products/  -> Categories and products
-orders/    -> Orders, order items, checkout, Stripe webhook
-config/    -> Django settings, URLs, Celery config, JWT auth
+users/     -> Django custom user and optional Django registration endpoint
+products/  -> Category and product catalog
+orders/    -> Order creation, order items, Stripe checkout, webhook, internal user sync
+config/    -> Django settings, URLs, Kong header authentication, Celery config
 ```
 
 ---
@@ -130,74 +171,189 @@ Services:
 
 ```text
 db                -> PostgreSQL database
-redis             -> Redis message broker
-order-service     -> Django API
-order_worker      -> Celery worker
+redis             -> Redis message broker/result backend
+order-service     -> Django API container
+order_worker      -> Celery worker for background tasks
 order_beat        -> Celery beat scheduler
-identity_service  -> FastAPI auth service
-gateway           -> Nginx reverse proxy
+identity_service  -> FastAPI identity/auth service
+gateway           -> Kong API Gateway
+```
+
+Volumes:
+
+```text
+postgres_data  -> Persists PostgreSQL data
+django_static  -> Shared Django static files volume
+```
+
+Current deployment behavior:
+
+```text
+1. PostgreSQL and Redis start first.
+2. Health checks confirm they are ready.
+3. Django, Celery worker, Celery beat, and FastAPI start after dependencies are healthy.
+4. Kong starts and routes external traffic from host port 8080 to internal services.
 ```
 
 ---
 
-# 4. Authentication Flow
+# 4. Environment and Secrets
 
-## Registration Flow
-
-Endpoint:
+Important environment variables:
 
 ```text
-POST /auth/register
+DEBUG
+SECRET_KEY
+JWT_SECRET
+INTERNAL_CLUSTER_SECRET
+STRIPE_PUBLIC_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+POSTGRES_DB
+POSTGRES_USER
+POSTGRES_PASSWORD
+POSTGRES_HOST
+POSTGRES_PORT
+DATABASE_URL
+```
+
+Purpose:
+
+```text
+SECRET_KEY
+  -> Django internal cryptographic secret.
+
+JWT_SECRET
+  -> Shared token signing/verification material used by FastAPI and Kong.
+
+INTERNAL_CLUSTER_SECRET
+  -> Private service-to-service passcode for FastAPI -> Django shadow-user sync.
+
+STRIPE_* values
+  -> Used by Django for Stripe checkout and webhook verification.
+```
+
+Current JWT detail:
+
+```text
+Identity Service/auth_utils.py expects JWT_SECRET to be a hex string.
+It converts that hex string into bytes using bytes.fromhex().
+FastAPI signs JWTs with HS256.
+The token includes iss = ecom_identity_v1 so Kong can locate the matching JWT credential.
+```
+
+Kong detail:
+
+```text
+Kong is configured with a consumer named identity-service.
+The JWT credential key is ecom_identity_v1.
+Kong validates the JWT exp claim.
+```
+
+---
+
+# 5. Authentication Flow
+
+## FastAPI Registration Flow
+
+External endpoint through Kong:
+
+```text
+POST /api/auth/register
+```
+
+Internal FastAPI route:
+
+```text
+POST /register
 ```
 
 Flow:
 
 ```text
-1. User sends email and password to FastAPI.
-2. FastAPI checks if the email already exists.
-3. Password is hashed using bcrypt.
-4. User is saved in the Identity Service table.
-5. FastAPI calls Django internally.
-6. Django creates a matching shadow user.
-7. User registration completes.
+1. User sends email and password to FastAPI through Kong.
+2. FastAPI checks whether that email already exists in identity_users.
+3. FastAPI hashes the password using bcrypt.
+4. FastAPI saves the user in PostgreSQL through SQLAlchemy.
+5. FastAPI loads INTERNAL_CLUSTER_SECRET using python-decouple.
+6. FastAPI calls Django internally at:
+
+   http://order-service:8000/api/orders/users/sync/
+
+7. FastAPI sends the email and X-Internal-Secret header.
+8. Django verifies INTERNAL_CLUSTER_SECRET.
+9. Django creates or reuses a matching shadow user.
+10. Registration completes.
 ```
 
-Why shadow user exists:
+Why shadow users exist:
 
 ```text
 FastAPI owns real authentication and passwords.
-
-Django still needs a local user row so orders can be linked to a user.
-
-So Django creates a shadow user with the same email but no usable password.
+Django still needs a local user record so orders can be linked to request.user.
+The Django shadow user has the same email but does not need a usable password.
 ```
 
 ---
 
-## Login Flow
+## FastAPI Login Flow
 
-Endpoint:
+External endpoint through Kong:
 
 ```text
-POST /auth/login
+POST /api/auth/login
+```
+
+Internal FastAPI route:
+
+```text
+POST /login
 ```
 
 Flow:
 
 ```text
 1. User sends email and password.
-2. FastAPI finds the user.
-3. FastAPI verifies the password.
-4. FastAPI creates a JWT access token.
-5. Client stores the token.
-6. Client sends the token to Django APIs using:
+2. FastAPI finds the user in identity_users.
+3. FastAPI verifies the bcrypt password hash.
+4. FastAPI creates a JWT with:
 
-Authorization: Bearer <token>
+   sub     -> user email
+   user_id -> identity service user ID
+   exp     -> expiration time
+   iss     -> ecom_identity_v1
+
+5. FastAPI signs the token with HS256.
+6. Client sends that token to protected gateway routes using:
+
+   Authorization: Bearer <token>
 ```
 
 ---
 
-## Django JWT Validation
+## Kong Edge JWT Validation
+
+File:
+
+```text
+gateway/kong.yml
+```
+
+Flow:
+
+```text
+1. Client calls a protected route under /api/products or /api/orders.
+2. Kong reads the Authorization header.
+3. Kong validates the JWT signature.
+4. Kong checks the exp claim.
+5. Kong uses the iss claim as the key lookup value.
+6. If the token is valid, Kong forwards the request to Django.
+7. Django maps the Kong-verified token identity to request.user.
+```
+
+---
+
+## Django Gateway Header Authentication
 
 File:
 
@@ -205,19 +361,80 @@ File:
 Order & Catalog Service/config/authentication.py
 ```
 
+Current DRF authentication class:
+
+```text
+config.authentication.KongJWTAuthentication
+```
+
 Flow:
 
 ```text
-1. Django receives request with Bearer token.
-2. Django decodes JWT using shared secret.
-3. Django reads email from token subject.
-4. Django gets or creates a local CustomUser.
-5. Request is treated as authenticated.
+1. Django receives a request from Kong.
+2. Django reads:
+
+   HTTP_X_USER_EMAIL
+   HTTP_X_USER_ID
+
+3. If X-User-Email is present, Django gets or creates a CustomUser.
+4. If X-User-Email is missing, Django checks that Kong authenticated the request through X-Consumer-Username.
+5. If Kong verification is present, Django reads non-sensitive identity claims from the Bearer token.
+6. Django binds that user to request.user.
+7. DRF permission checks continue normally.
+```
+
+Important shift:
+
+```text
+Django no longer owns JWT signature verification for protected gateway routes.
+Kong verifies the JWT first; Django then maps the verified identity to request.user.
 ```
 
 ---
 
-# 5. Product / Catalog Flow
+# 6. Django User Flow
+
+Files:
+
+```text
+users/models.py
+users/serializers.py
+users/views.py
+users/urls.py
+users/admin.py
+```
+
+Main model:
+
+```text
+CustomUser
+  - email
+  - first_name
+  - last_name
+  - is_active
+  - is_staff
+  - date_joined
+```
+
+Important detail:
+
+```text
+AUTH_USER_MODEL = users.CustomUser
+```
+
+Django uses email as the login identity instead of username.
+
+There is still a Django registration endpoint:
+
+```text
+POST /api/users/register/
+```
+
+But this route is not currently exposed by Kong, because Kong routes only `/api/auth`, `/api/products`, and `/api/orders`.
+
+---
+
+# 7. Product / Catalog Flow
 
 Files:
 
@@ -248,33 +465,39 @@ Product
   - updated_at
 ```
 
-Endpoints are generated using Django REST Framework routers.
-
-Main routes:
+Django route prefix:
 
 ```text
-/products/categories/
-/products/items/
+/api/products/
 ```
 
-Permissions:
+Main Django routes:
 
 ```text
-Anyone can read products/categories.
-Only authenticated users can create, update, or delete.
+GET /api/products/categories/
+GET /api/products/items/
+GET /api/products/categories/<id>/
+GET /api/products/items/<id>/
 ```
 
-Simple explanation:
+Django catalog behavior:
 
 ```text
-Categories group products.
-Products contain price and stock.
-Only active products and categories are shown.
+1. Categories and products use ReadOnlyModelViewSet.
+2. The Django view permissions are AllowAny.
+3. Clients cannot create, update, or delete catalog records through these viewsets.
+```
+
+Gateway behavior:
+
+```text
+Kong now exposes /api/products through a public route without the JWT plugin.
+This matches Django's AllowAny catalog read behavior.
 ```
 
 ---
 
-# 6. Order Flow
+# 8. Order Flow
 
 Files:
 
@@ -301,7 +524,7 @@ OrderItem
   - quantity
 ```
 
-Order statuses:
+Declared order statuses:
 
 ```text
 pending
@@ -311,7 +534,7 @@ delivered
 cancelled
 ```
 
-Endpoint:
+Order creation endpoint:
 
 ```text
 POST /api/orders/
@@ -330,32 +553,38 @@ Example payload:
 }
 ```
 
-Flow:
+Current order creation flow:
 
 ```text
-1. User sends products and quantities.
-2. Django checks if user is authenticated.
-3. Django checks whether every product has enough stock.
-4. If stock is insufficient, order is rejected.
-5. If stock is available, Django creates the order.
-6. Django reduces product stock.
-7. Django creates order items.
-8. Product price is copied into OrderItem.price.
-9. Celery background task is triggered.
-10. API returns the created order.
+1. Client sends products and quantities with a Bearer token.
+2. Kong validates the JWT.
+3. Django maps the Kong-verified identity to request.user.
+4. The order is linked to request.user.
+5. OrderSerializer starts a database transaction.
+6. Django creates the parent Order linked to request.user.
+7. For each item, Django re-queries the Product using select_for_update().
+8. The product row is locked at database level.
+9. Django checks whether stock is available.
+10. If stock is insufficient, the transaction rolls back.
+11. If stock is available, stock is deducted.
+12. Django creates OrderItem rows.
+13. Product price is copied into OrderItem.price.
+14. After the transaction commits, Django queues a Celery task using transaction.on_commit().
+15. API returns the created order.
 ```
 
-Important business rule:
+Important business rules:
 
 ```text
+Stock is protected by a database transaction.
+Product rows are locked during order creation to reduce race conditions.
 Price is locked at purchase time.
-
-If product price changes later, old orders remain correct because each OrderItem stores its own price.
+The Celery task is queued only after the database transaction safely commits.
 ```
 
 ---
 
-# 7. Payment Flow
+# 9. Payment Flow
 
 Payment provider:
 
@@ -363,7 +592,7 @@ Payment provider:
 Stripe
 ```
 
-Files:
+Main file:
 
 ```text
 orders/views.py
@@ -380,14 +609,24 @@ POST /api/orders/<order_id>/create-checkout-session/
 Flow:
 
 ```text
-1. User selects an existing pending order.
-2. Django checks that order belongs to the current user.
-3. Django checks that order status is pending.
-4. Django converts order items into Stripe line items.
-5. Django creates a Stripe Checkout Session.
-6. Stripe returns a checkout URL.
-7. Client redirects user to Stripe.
+1. Client sends a valid JWT to Kong.
+2. Kong validates the JWT and forwards user headers to Django.
+3. Django maps the headers to request.user.
+4. Django verifies the order belongs to the current user through get_queryset().
+5. Django rejects checkout if the order status is not pending.
+6. Django converts each OrderItem into a Stripe line item.
+7. Django creates a Stripe Checkout Session.
+8. Stripe returns a checkout_url.
+9. Client redirects the user to Stripe.
 ```
+
+Stripe uses:
+
+```text
+client_reference_id = order.id
+```
+
+That lets the webhook connect the Stripe payment back to the local order.
 
 ---
 
@@ -402,27 +641,29 @@ POST /api/orders/webhook/
 Flow:
 
 ```text
-1. Stripe sends payment event to Django.
-2. Django verifies Stripe webhook signature.
-3. Django checks event type.
-4. If event is checkout.session.completed:
-   - Django reads order ID from client_reference_id.
-   - Django finds the order.
-   - If order is pending, Django marks it as paid.
-5. Django returns HTTP 200 to Stripe.
+1. Stripe sends a webhook request to Django.
+2. Django reads the raw request body and Stripe-Signature header.
+3. Django verifies the webhook using STRIPE_WEBHOOK_SECRET.
+4. For checkout.session.completed:
+   - Django reads client_reference_id.
+   - Django finds the matching Order.
+   - If the order is pending, Django marks it paid.
+5. For payment_intent.payment_failed:
+   - Django logs the failure.
+6. Django returns HTTP 200 for handled webhook events.
 ```
 
-Simple explanation:
+Important routing note:
 
 ```text
-The user pays on Stripe.
-Stripe tells Django payment succeeded.
-Django updates the order from pending to paid.
+The webhook path is under /api/orders/webhook/.
+Kong now exposes /api/orders/webhook through a public route without the JWT plugin.
+Django still protects the endpoint by verifying Stripe's webhook signature.
 ```
 
 ---
 
-# 8. Background Task Flow
+# 10. Background Task Flow
 
 Files:
 
@@ -437,39 +678,48 @@ Technology:
 Celery + Redis
 ```
 
-Triggered after:
-
-```text
-Order creation
-```
-
-Flow:
-
-```text
-1. Django creates order.
-2. Django sends task to Redis.
-3. Celery worker receives task.
-4. Celery simulates invoice generation.
-5. Celery simulates sending email.
-```
-
 Current task:
 
 ```text
 fulfill_and_send_invoice_task(order_id)
 ```
 
-Simple explanation:
+Task name:
 
 ```text
-Slow work is moved outside the API request.
-
-The user gets a fast response, while invoice/email work happens in the background.
+orders.tasks.fulfill_and_send_invoice_task
 ```
+
+Triggered after:
+
+```text
+Successful order creation transaction commit
+```
+
+Flow:
+
+```text
+1. Django creates an order inside a transaction.
+2. After commit, Django queues fulfill_and_send_invoice_task(order.id).
+3. Redis stores the task message.
+4. Celery worker receives the task.
+5. Worker fetches the order by ID.
+6. Worker simulates invoice generation and email dispatch.
+7. Worker prints/logs task results.
+```
+
+Current implementation detail:
+
+```text
+The task no longer changes order status.
+It simulates invoice/email work and leaves payment state for the Stripe webhook.
+```
+
+This keeps the payment lifecycle clean: the worker performs side effects, while Stripe owns `pending -> paid`.
 
 ---
 
-# 9. Database Design
+# 11. Database Design
 
 Database:
 
@@ -492,64 +742,57 @@ Relationship overview:
 
 ```text
 Identity User
-  -> Used for real login/password in FastAPI
+  -> Real login/password record owned by FastAPI.
 
 Django CustomUser
-  -> Used by Django to link orders to a user
+  -> Local Django user/shadow user used for request.user and order ownership.
 
 Category
-  -> Has many Products
+  -> Has many Products.
 
 Product
-  -> Belongs to Category
-  -> Has many OrderItems
+  -> Belongs to Category.
+  -> Has many OrderItems.
+  -> Contains current stock and current price.
 
 Order
-  -> Belongs to User
-  -> Has many OrderItems
+  -> Belongs to a Django CustomUser.
+  -> Has many OrderItems.
+  -> Tracks lifecycle status.
 
 OrderItem
-  -> Belongs to Order
-  -> Belongs to Product
+  -> Belongs to an Order.
+  -> Belongs to a Product.
+  -> Stores price snapshot and quantity.
 ```
 
 ---
 
-# 10. Admin Flow
+# 12. Admin and Static Files
 
-Django admin route:
+Django has admin and static support configured:
 
 ```text
 /admin/
+/static/
 ```
 
-Admin can manage:
+But the active Kong config currently exposes only:
 
 ```text
-Users
-Categories
-Products
-Orders
-Order Items
+/api/auth
+/api/products
+/api/orders
+/api/orders/webhook
+/api/token
+/orders/*
 ```
 
-Admin configuration files:
-
-```text
-users/admin.py
-products/admin.py
-orders/admin.py
-```
-
-Simple explanation:
-
-```text
-Admin is used by internal staff/developers to inspect and manage backend data.
-```
+So `/admin/` and `/static/` are not currently exposed through Kong unless additional Kong routes are added.
 
 ---
 
-# 11. Testing
+# 13. Testing and API Scratch File
 
 Testing framework:
 
@@ -559,7 +802,7 @@ pytest-django
 Django REST Framework APIClient
 ```
 
-Important files:
+Important test files:
 
 ```text
 users/tests.py
@@ -578,49 +821,64 @@ Stock deduction
 Insufficient stock rejection
 ```
 
-Example tested behavior:
+API scratch/test file:
 
 ```text
-If product stock is 10 and user buys 2, stock becomes 8.
-
-If user tries to buy 20 while only 10 exist, order is rejected and stock remains 10.
+api_tests.rest
 ```
+
+Current note:
+
+```text
+api_tests.rest now uses:
+
+http://127.0.0.1:8080
+POST /api/auth/login
+POST /api/auth/register
+GET  /api/products/items/
+POST /api/orders/
+```
+
+So the scratch file now matches the current Kong gateway setup for the main registration, login, catalog, and order flow.
 
 ---
 
-# 12. Request Flow Summary
+# 14. Request Flow Summary
 
-## User Registration
+## User Registration Through Kong and FastAPI
 
 ```text
 Client
-  -> Nginx /auth/register
-  -> FastAPI Identity Service
+  -> Kong /api/auth/register
+  -> FastAPI /register
   -> PostgreSQL identity_users
-  -> Django internal user sync
+  -> FastAPI internal call to Django /api/orders/users/sync/
+  -> Django validates INTERNAL_CLUSTER_SECRET
   -> PostgreSQL users_customuser
 ```
 
 ---
 
-## User Login
+## User Login Through Kong and FastAPI
 
 ```text
 Client
-  -> Nginx /auth/login
-  -> FastAPI Identity Service
-  -> JWT token returned
+  -> Kong /api/auth/login
+  -> FastAPI /login
+  -> FastAPI verifies password
+  -> FastAPI returns JWT signed for Kong validation
 ```
 
 ---
 
-## View Products
+## Authenticated Product or Order Request
 
 ```text
-Client
-  -> Django Product API
-  -> PostgreSQL products_product
-  -> Product list returned
+Client with Bearer token
+  -> Kong /api/orders/*
+  -> Kong validates JWT
+  -> Django KongJWTAuthentication maps the verified identity to request.user
+  -> Django view handles request
 ```
 
 ---
@@ -628,13 +886,15 @@ Client
 ## Create Order
 
 ```text
-Client with JWT
-  -> Django /api/orders/
-  -> JWT validated
-  -> Stock checked
-  -> Order created
-  -> Stock deducted
-  -> Celery task queued
+Client with Bearer token
+  -> Kong /api/orders/
+  -> Kong JWT plugin validates token
+  -> Django maps the verified token identity to request.user
+  -> OrderSerializer transaction.atomic()
+  -> Product row locked with select_for_update()
+  -> Stock checked and deducted
+  -> OrderItem rows created with price snapshots
+  -> Celery task queued after commit
   -> Order returned
 ```
 
@@ -643,107 +903,384 @@ Client with JWT
 ## Pay for Order
 
 ```text
-Client
-  -> Django create-checkout-session
-  -> Stripe Checkout Session created
-  -> Checkout URL returned
+Client with Bearer token
+  -> Kong /api/orders/<id>/create-checkout-session/
+  -> Django creates Stripe Checkout Session
+  -> Client receives checkout_url
   -> User pays on Stripe
-  -> Stripe webhook calls Django
-  -> Order marked as paid
+  -> Stripe calls /api/orders/webhook/
+  -> Django verifies Stripe webhook signature
+  -> Order marked paid
 ```
 
 ---
 
-# 13. Strengths of the Project
+# 15. Current Strengths
 
 ```text
-1. Clear separation between identity and commerce logic.
-2. JWT-based authentication.
-3. Product price locking inside order items.
-4. Stock validation before order creation.
-5. Stripe checkout integration.
-6. Stripe webhook signature verification.
-7. Async background task processing with Celery.
-8. Dockerized multi-service setup.
-9. PostgreSQL used instead of SQLite.
-10. Tests for important business rules.
+1. Kong is now the centralized API gateway.
+2. Backend service ports are internal-only in Docker Compose.
+3. JWT verification has moved to the edge gateway.
+4. Django no longer needs to parse JWTs directly for protected gateway routes.
+5. Django maps Kong-verified identity into request.user.
+6. FastAPI includes an iss claim that matches the Kong JWT credential key.
+7. INTERNAL_CLUSTER_SECRET separates internal service auth from public JWT auth.
+8. Products and categories remain read-only at the Django view layer.
+9. Order creation uses transaction.atomic().
+10. Product stock rows are locked with select_for_update().
+11. Product price is locked into OrderItem at purchase time.
+12. Celery work is queued after transaction commit.
+13. Stripe checkout and webhook verification are implemented.
+14. Tests cover important stock and order behaviors.
 ```
 
 ---
 
-# 14. Important Observations
+# 16. Current Observations / Things To Revisit
 
-## JWT Secret Wiring
+## Kong Route Coverage
 
-Django JWT authentication reads:
+Kong currently exposes:
 
 ```text
-JWT_SECRET
+/api/auth
+/api/products
+/api/orders
 ```
 
-But `docker-compose.yml` passes:
+It does not expose:
 
 ```text
-SECRET_KEY=${SHARED_JWT_SECRET}
-```
-
-This may cause FastAPI tokens to fail in Django unless `JWT_SECRET` is also passed to Django.
-
----
-
-## Product Route Gateway Issue
-
-Django mounts products at:
-
-```text
-/products/
-```
-
-Nginx forwards:
-
-```text
-/api/
 /admin/
-/auth/
+/static/
+/api/users/
+/api/token/refresh/
 ```
 
-So product endpoints may not be reachable through the gateway unless Nginx is updated or products are moved under `/api/products/`.
+That may be intentional, but the docs/API scratch file should match the actual public gateway routes.
 
 ---
 
-## Secrets in .env
+## Product Catalog Auth Mismatch
 
-The `.env` file contains Stripe test keys and webhook secret.
-
-Even though they are test keys, they should be rotated if the project is shared publicly.
-
----
-
-# 15. Final Simple Explanation
-
-This backend works like this:
+Status:
 
 ```text
-FastAPI handles identity.
-Django handles ecommerce.
-PostgreSQL stores everything.
-Redis passes background jobs to Celery.
-Celery handles slow work like invoices and emails.
-Stripe handles payment.
-Nginx routes traffic to the right service.
+Fixed.
 ```
 
-The main user journey is:
+Django allows anonymous catalog access:
+
+```text
+permission_classes = [AllowAny]
+```
+
+Kong now exposes:
+
+```text
+/api/products
+```
+
+without the JWT plugin, so gateway behavior and Django behavior are aligned.
+
+---
+
+## Stripe Webhook JWT Exemption
+
+Status:
+
+```text
+Fixed.
+```
+
+The webhook endpoint is:
+
+```text
+/api/orders/webhook/
+```
+
+Kong now defines a separate public route for:
+
+```text
+/api/orders/webhook
+```
+
+without JWT. Django still verifies the Stripe signature before changing any order status.
+
+---
+
+## JWT Secret Encoding Should Be Verified
+
+FastAPI currently does:
+
+```text
+SECRET_KEY = bytes.fromhex(os.getenv("JWT_SECRET"))
+```
+
+Kong is configured with the JWT credential secret through Docker/Kong configuration.
+
+Recommended check:
+
+```text
+Confirm Kong is verifying against the same raw bytes that FastAPI signs with, not the visible hex text itself.
+```
+
+---
+
+## Celery Status Mismatch
+
+Status:
+
+```text
+Fixed.
+```
+
+`orders/tasks.py` previously attempted to set:
+
+```text
+completed
+```
+
+But `Order.STATUS_CHOICES` currently contains:
+
+```text
+pending
+paid
+shipped
+delivered
+cancelled
+```
+
+Current behavior:
+
+```text
+The Celery task no longer changes order status.
+It only simulates invoice generation and email dispatch.
+```
+
+Stripe remains responsible for changing orders from `pending` to `paid`.
+
+---
+
+## Duplicate Database Configuration
+
+`config/settings.py` first builds `DATABASES` from environment variables, then later overwrites it with a hardcoded PostgreSQL config.
+
+Current result:
+
+```text
+The hardcoded db/ecom_db/ecom_user configuration wins at runtime.
+```
+
+Recommended fix:
+
+```text
+Keep one DATABASES block, preferably the environment-driven one with sensible defaults.
+```
+
+---
+
+## API Scratch File Is Current
+
+Status:
+
+```text
+Fixed.
+```
+
+`api_tests.rest` now uses:
+
+```text
+http://127.0.0.1:8080
+/api/auth/register
+/api/auth/login
+/api/products/items/
+/api/orders/
+```
+
+Remaining note:
+
+```text
+The checkout example uses the legacy /orders/<id>/create-checkout-session/ path for compatibility with the API spec.
+```
+
+---
+
+# 17. Final Simple Explanation
+
+This backend currently works like this:
+
+```text
+Kong receives all public API traffic on port 8080.
+FastAPI handles registration, login, password hashing, and JWT creation.
+FastAPI syncs shadow users into Django through an internal secret.
+Kong validates JWTs before protected requests reach Django.
+Kong verifies protected requests before Django handles them.
+Django maps the verified identity to request.user and handles ecommerce logic.
+PostgreSQL stores identity users, Django users, products, orders, and order items.
+Redis carries Celery jobs.
+Celery performs background fulfillment/invoice/email simulation.
+Stripe handles checkout payment.
+Stripe webhooks update local order payment status after Django verifies the Stripe signature.
+```
+
+Main user journey:
+
+```text
+Register through /api/auth/register
+  -> FastAPI creates identity user
+  -> FastAPI syncs shadow user into Django
+  -> Login through /api/auth/login
+  -> Receive Kong-verifiable JWT
+  -> Call protected Kong routes with Bearer token
+  -> Kong verifies JWT before Django handles the request
+  -> Django creates authenticated order
+  -> Django locks stock and creates order safely
+  -> Celery task starts after commit
+  -> Create Stripe checkout session
+  -> Pay on Stripe
+  -> Stripe webhook marks order as paid
+```
+
+---
+
+# 18. Latest Implementation Update
+
+This section compares the current codebase against the last documented observations above.
+
+The project has moved from "Kong migration with known follow-up items" to a cleaner gateway-first shape:
+
+```text
+Public client
+  -> Kong :8080
+     -> /api/auth/*             -> FastAPI Identity Service
+     -> /api/products/*         -> Django catalog, public at gateway
+     -> /api/orders/webhook/*   -> Django Stripe webhook, public at gateway
+     -> /api/orders/*           -> Django orders, JWT protected
+     -> /orders/*               -> Legacy checkout compatibility route, JWT protected
+     -> /api/token/*            -> Django SimpleJWT compatibility route, public at gateway
+```
+
+## What Is Fixed
+
+| Previous observation | Current state | Result |
+| --- | --- | --- |
+| Product catalog could require JWT at Kong even though Django allows public reads. | `gateway/kong.yml` now has `products-public-route` without the JWT plugin. | Product reads can be public through `/api/products/*`. |
+| Stripe webhook could be blocked by Kong JWT because it lives under `/api/orders`. | `gateway/kong.yml` now defines `order-webhook-route` before the protected orders route and does not attach JWT. | Stripe can call `/api/orders/webhook/` while Django still verifies the Stripe signature. |
+| Celery task tried to set an invalid `completed` status. | `orders/tasks.py` now leaves order status unchanged and only performs invoice/email simulation. | Payment state remains owned by Stripe webhook: `pending -> paid`. |
+| `api_tests.rest` used old gateway/auth paths. | `api_tests.rest` now targets `http://127.0.0.1:8080`, `/api/auth/register`, `/api/auth/login`, `/api/products/items/`, and `/api/orders/`. | Manual API testing now matches the Kong-first runtime. |
+| Internal sync reused a broad secret source. | FastAPI sends `INTERNAL_CLUSTER_SECRET`; Django reads `INTERNAL_CLUSTER_SECRET` through `decouple.config`. | Service-to-service sync is separated from JWT signing and Django `SECRET_KEY`. |
+
+## What Changed
+
+```text
+Authentication boundary
+  Before:
+    Django directly decoded JWTs.
+
+  Now:
+    Kong is the edge verifier.
+    Django trusts Kong headers when present.
+    Django falls back to decoding JWT claims only after checking Kong's X-Consumer-Username marker.
+```
+
+```text
+Gateway route model
+  Public:
+    /api/auth
+    /api/products
+    /api/orders/webhook
+    /api/token
+
+  Protected:
+    /api/orders
+    /orders/* legacy checkout path
+```
+
+```text
+Order lifecycle
+  pending
+    -> Celery invoice/email simulation runs without changing payment status
+    -> Stripe checkout is created
+    -> Stripe webhook verifies payment
+    -> paid
+```
+
+## Current Request Map
 
 ```text
 Register
-  -> Login
-  -> Get JWT
-  -> Browse products
-  -> Create order
-  -> Stock is deducted
-  -> Invoice/email task starts
-  -> Create Stripe checkout
-  -> Pay
-  -> Stripe webhook marks order as paid
+  Client -> Kong /api/auth/register
+         -> FastAPI /register
+         -> PostgreSQL identity_users
+         -> Django /api/orders/users/sync/
+         -> PostgreSQL users_customuser
+
+Login
+  Client -> Kong /api/auth/login
+         -> FastAPI /login
+         -> JWT with iss=ecom_identity_v1
+
+Browse catalog
+  Client -> Kong /api/products/items/
+         -> Django products API
+         -> PostgreSQL products_product
+
+Create order
+  Client + Bearer token -> Kong /api/orders/
+                        -> Kong JWT plugin
+                        -> Django KongJWTAuthentication
+                        -> OrderSerializer transaction
+                        -> Product row locks and stock deduction
+                        -> Celery task after commit
+
+Checkout
+  Client + Bearer token -> Kong /api/orders/<id>/create-checkout-session/
+                        -> Django Stripe Checkout session
+                        -> Stripe hosted payment page
+
+Webhook
+  Stripe -> Kong /api/orders/webhook/
+         -> Django Stripe signature verification
+         -> Order marked paid
+```
+
+## Still Open / Worth Cleaning Next
+
+| Area | Current note | Suggested direction |
+| --- | --- | --- |
+| Database settings | `config/settings.py` still defines `DATABASES` twice. The second hardcoded PostgreSQL block wins at runtime. | Keep one environment-driven `DATABASES` block with the build-mode SQLite fallback. |
+| JWT secret handling | FastAPI signs with `JWT_SECRET` from the environment. Kong currently stores the same secret directly in `gateway/kong.yml`. | Move the Kong secret injection to deployment-time configuration or clearly document it as local-only. |
+| Header mapping | Kong validates JWTs, but the route does not currently add `X-User-Email` / `X-User-Id` headers on `/api/orders`. Django can still decode claims after Kong verification. | Either add a Kong request-transformer for protected order routes or simplify Django auth around the current verified-token fallback. |
+| Admin/static exposure | Django admin and static files exist, but Kong does not expose `/admin/` or `/static/`. | Keep internal-only if intentional, or add explicit Kong routes for admin workflows. |
+| Legacy checkout route | `/orders/*` is supported for API spec compatibility. | Prefer `/api/orders/<id>/create-checkout-session/` as the canonical route and keep legacy only if clients still need it. |
+
+## Clean Target Architecture
+
+```text
+Kong owns:
+  - Public routing
+  - JWT verification for protected APIs
+  - Public exceptions for catalog and Stripe webhook routes
+
+FastAPI owns:
+  - Identity users
+  - Password hashing
+  - JWT creation
+  - Shadow-user sync requests
+
+Django owns:
+  - Catalog data
+  - Order creation
+  - Stock integrity
+  - Stripe checkout/webhook logic
+  - Admin and business records
+
+Redis/Celery own:
+  - Background invoice/email simulation after order commit
+
+PostgreSQL owns:
+  - Identity users
+  - Django shadow users
+  - Catalog, orders, and order items
 ```
