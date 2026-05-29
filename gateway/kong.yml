@@ -71,3 +71,11 @@ consumers:
         # 🔐 Hardcoded JWT secret matching the environment JWT_SECRET value
         secret: "10633b0564498e9d489b479d8e52a5bb75f4ecf68bc6f0bd6b57cbd4f4e070b9"
         algorithm: HS256
+
+# 🟢 GLOBAL PLUGINS (Applies to all services and routes)
+plugins:
+  - name: rate-limiting
+    config:
+      second: 5        # Max 5 requests per second per IP
+      hour: 10000      # Max 10,000 requests per hour per IP
+      policy: local    # Tracks request counts in Kong's local memory cache
