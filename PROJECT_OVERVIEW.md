@@ -678,6 +678,17 @@ Technology:
 Celery + Redis
 ```
 
+Runtime settings:
+
+```text
+CELERY_BROKER_URL       -> redis://redis:6379/0
+CELERY_RESULT_BACKEND   -> redis://redis:6379/0
+CELERY_ACCEPT_CONTENT   -> json
+CELERY_TASK_SERIALIZER  -> json
+CELERY_RESULT_SERIALIZER -> json
+CELERY_TIMEZONE         -> UTC
+```
+
 Current task:
 
 ```text
@@ -1170,6 +1181,7 @@ Public client
 | Celery task tried to set an invalid `completed` status. | `orders/tasks.py` now leaves order status unchanged and only performs invoice/email simulation. | Payment state remains owned by Stripe webhook: `pending -> paid`. |
 | `api_tests.rest` used old gateway/auth paths. | `api_tests.rest` now targets `http://127.0.0.1:8080`, `/api/auth/register`, `/api/auth/login`, `/api/products/items/`, and `/api/orders/`. | Manual API testing now matches the Kong-first runtime. |
 | Internal sync reused a broad secret source. | FastAPI sends `INTERNAL_CLUSTER_SECRET`; Django reads `INTERNAL_CLUSTER_SECRET` through `decouple.config`. | Service-to-service sync is separated from JWT signing and Django `SECRET_KEY`. |
+| Celery result handling was implicit. | `config/settings.py` now sets `CELERY_RESULT_SERIALIZER = json` and `CELERY_TIMEZONE = UTC`. | Worker result state tracking is more predictable and time handling is explicit. |
 
 ## What Changed
 
@@ -1201,6 +1213,7 @@ Gateway route model
 Order lifecycle
   pending
     -> Celery invoice/email simulation runs without changing payment status
+    -> Celery stores task/result data using JSON serialization
     -> Stripe checkout is created
     -> Stripe webhook verifies payment
     -> paid

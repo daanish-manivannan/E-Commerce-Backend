@@ -27,15 +27,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-import os
-ALLOWED_HOSTS = ['*']  # For development only, replace with specific hosts in production
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1"
+).split(",")
 
 # 1. Fallback Secret Key
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-build-mode-fallback')
 
 # 2. Add a check for "Build Mode"
 # This allows collectstatic to run without a real DB connection
-IS_BUILD_MODE = os.getenv('DB_IGNORE', 'False') == 'True'
+IS_BUILD_MODE = config(
+    "DB_IGNORE",
+    default=False,
+    cast=bool
+)
 
 if IS_BUILD_MODE:
     DATABASES = {
@@ -107,18 +113,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database backup configuration fallback
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ecom_db',
-        'USER': 'ecom_user',
-        'PASSWORD': 'ecom_password',
-        'HOST': 'db',  # This matches the service name in docker-compose
-        'PORT': '5432',
-    }
-}
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -175,18 +169,20 @@ REST_FRAMEWORK = {
 # CELERY SETTINGS
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'               # Added for tracking task success/failure states
+CELERY_TIMEZONE = 'UTC'
 
 
 # STRIPE & ENVIRONMENT VARIABLES ENVIRONMENT TRACKING
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
-SECRET_KEY = os.getenv('SECRET_KEY')
 
 # Shared Microservices Encryption Secret (FastAPI Handoff)
-JWT_SECRET = os.getenv('JWT_SECRET', 'fallback_do_not_use_in_prod')
+JWT_SECRET = config("JWT_SECRET")
 
 
 # Logging Configuration
