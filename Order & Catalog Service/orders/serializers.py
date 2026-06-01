@@ -1,16 +1,20 @@
-from rest_framework import serializers
 from django.db import transaction
-from .models import Order, OrderItem
+from rest_framework import serializers
+
 from products.models import Product
+
+from .models import Order, OrderItem
 from .tasks import fulfill_and_send_invoice_task
 
+
 class OrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.ReadOnlyField(source='product.name')
-    price = serializers.ReadOnlyField() 
+    product_name = serializers.ReadOnlyField(source="product.name")
+    price = serializers.ReadOnlyField()
 
     class Meta:
         model = OrderItem
-        fields = ['product', 'product_name', 'quantity', 'price']
+        fields = ["product", "product_name", "quantity", "price"]
+
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
@@ -19,44 +23,45 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'status', 'created_at', 'total_cost', 'items']
+        fields = ["id", "status", "created_at", "total_cost", "items"]
 
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
-        
+        items_data = validated_data.pop("items")
+
         # 📌 1. Open an atomic database transaction context block
         with transaction.atomic():
             # Create the parent order shell linked to the context request user
-            order = Order.objects.create(user=self.context['request'].user, **validated_data)
+            order = Order.objects.create(
+                user=self.context["request"].user, **validated_data
+            )
 
             for item_data in items_data:
-                product_instance = item_data['product']
-                quantity = item_data['quantity']
-                
+                product_instance = item_data["product"]
+                quantity = item_data["quantity"]
+
                 # 📌 2. RE-QUERY AND LOCK THE ROW AT DATABASE LEVEL
                 # This explicitly blocks concurrency race conditions
-                product = Product.objects.select_for_update().get(id=product_instance.id)
-                
+                product = Product.objects.select_for_update().get(
+                    id=product_instance.id
+                )
+
                 # 📌 3. Atomic Evaluation & Deduct Combined
                 if product.stock < quantity:
                     raise serializers.ValidationError(
                         f"Not enough stock for {product.name}. Only {product.stock} left."
                     )
-                
+
                 # Deduct inventory securely
                 product.stock -= quantity
                 product.save()
 
                 # Lock in the line-item snapshot invoice metadata
                 OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    price=product.price,
-                    quantity=quantity
+                    order=order, product=product, price=product.price, quantity=quantity
                 )
-                
+
         # 📌 4. BACKGROUND TASKS (Triggered only AFTER transaction safely commits)
         # We pass it to Celery. .delay() drops a message straight into Redis!
         transaction.on_commit(lambda: fulfill_and_send_invoice_task.delay(order.id))
-        
+
         return order

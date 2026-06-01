@@ -1,0 +1,82 @@
+[tool.ruff]
+# Target Python version 3.11 for FastAPI & Django compatibility
+target-version = "py311"
+line-length = 88
+
+# Linting Rules
+# F: Pyflakes
+# E/W: Pycodestyle (errors/warnings)
+# I: isort
+# B: flake8-bugbear (common design issues/bugs)
+# Q: flake8-quotes (string literal quotes)
+select = ["F", "E", "W", "I", "B", "Q"]
+ignore = []
+
+# Global exclude paths
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "venv",
+    "**/migrations/*",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+# Auto-recognized local imports for each service
+known-first-party = ["orders", "products", "users", "config", "auth_utils", "database", "main", "models", "schemas"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.ruff_cache
+  | venv
+  | .*/migrations/
+  | __pycache__
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+skip = [
+    "venv",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+]
+skip_glob = ["**/migrations/*"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+# Globally ignore missing import warnings since third-party libraries might not provide type stubs
+ignore_missing_imports = true
+
+# Exclude migrations from static type checking
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true

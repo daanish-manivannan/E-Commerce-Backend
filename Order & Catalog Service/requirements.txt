@@ -1,7 +1,18 @@
+# Core
+Django==5.2.13
+djangorestframework==3.17.1
+djangorestframework_simplejwt==5.5.1
+psycopg2-binary==2.9.12
+psycopg==3.3.3
+psycopg-binary==3.3.3
+celery==5.6.3
+redis==7.4.0
+stripe==15.1.0
+
+# Transitive Core Dependencies
 amqp==5.3.1
 asgiref==3.11.1
 billiard==4.2.4
-celery==5.6.3
 certifi==2026.4.22
 charset-normalizer==3.4.7
 click==8.3.3
@@ -9,35 +20,27 @@ click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
 colorama==0.4.6
-Django==5.2.13
-djangorestframework==3.17.1
-djangorestframework_simplejwt==5.5.1
 idna==3.13
-iniconfig==2.3.0
 kombu==5.6.2
 packaging==26.1
-pluggy==1.6.0
 prompt_toolkit==3.0.52
-psycopg==3.3.3
-psycopg-binary==3.3.3
-psycopg2-binary==2.9.12
 Pygments==2.20.0
-PyJWT==2.12.1
-pytest==9.0.3
-pytest-django==4.12.0
 python-dateutil==2.9.0.post0
-python-decouple==3.8
-redis==7.4.0
 requests==2.33.1
 six==1.17.0
 sqlparse==0.5.5
-stripe==15.1.0
 typing_extensions==4.15.0
 tzdata==2026.1
 tzlocal==5.3.1
 urllib3==2.6.3
 vine==5.1.0
 wcwidth==0.6.0
+
+
+# Infrastructure
 whitenoise==6.12.0
+
+# Gateway Related
+PyJWT==2.12.1
 python-jose[cryptography]
-djangorestframework
+python-decouple==3.8
