@@ -92,7 +92,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "UserAttributeSimilarityValidator"
+        ),
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -133,7 +136,6 @@ AUTH_USER_MODEL = "users.CustomUser"
 # Django REST Framework Settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        # 'config.authentication.JWTAuthentication',  # Path to your custom verification logic
         # 🔄 UPDATED: Point to the new class name we built for Kong headers
         "config.authentication.KongJWTAuthentication",
     ],
@@ -154,12 +156,12 @@ CELERY_TIMEZONE = "UTC"
 
 
 # STRIPE & ENVIRONMENT VARIABLES ENVIRONMENT TRACKING
-STRIPE_PUBLIC_KEY = config("STRIPE_PUBLIC_KEY")
-STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
+STRIPE_PUBLIC_KEY = config("STRIPE_PUBLIC_KEY", default="dummy_public_key")
+STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="dummy_secret_key")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="dummy_webhook_secret")
 
 # Shared Microservices Encryption Secret (FastAPI Handoff)
-JWT_SECRET = config("JWT_SECRET")
+JWT_SECRET = config("JWT_SECRET", default="dummy_jwt_secret")
 
 
 # Logging Configuration

@@ -47,6 +47,7 @@ class UserSyncView(APIView):
             )
 
         email = request.data.get("email")
+        is_active = request.data.get("is_active", True)
         if not email:
             return Response(
                 {"detail": "Email missing"}, status=status.HTTP_400_BAD_REQUEST
@@ -56,13 +57,24 @@ class UserSyncView(APIView):
             with transaction.atomic():
                 user, created = User.objects.get_or_create(email=email)
 
+                user.is_active = is_active
                 if created:
                     user.set_unusable_password()
-                    user.save()
-                    logger.info(f"✅ Created NEW Shadow User: {email} (ID: {user.id})")
+                user.save()
+
+                if created:
+                    logger.info(
+                        "✅ Created NEW Shadow User: %s (ID: %d, Active: %s)",
+                        email,
+                        user.id,
+                        is_active,
+                    )
                 else:
                     logger.info(
-                        f"ℹ️ Shadow User already exists: {email} (ID: {user.id})"
+                        "ℹ️ Synced existing Shadow User: %s (ID: %d, Active: %s)",
+                        email,
+                        user.id,
+                        is_active,
                     )
 
             current_count = User.objects.count()

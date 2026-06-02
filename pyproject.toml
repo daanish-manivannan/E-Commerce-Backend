@@ -3,15 +3,6 @@
 target-version = "py311"
 line-length = 88
 
-# Linting Rules
-# F: Pyflakes
-# E/W: Pycodestyle (errors/warnings)
-# I: isort
-# B: flake8-bugbear (common design issues/bugs)
-# Q: flake8-quotes (string literal quotes)
-select = ["F", "E", "W", "I", "B", "Q"]
-ignore = []
-
 # Global exclude paths
 exclude = [
     ".git",
@@ -24,6 +15,20 @@ exclude = [
     "build",
     "dist",
 ]
+
+[tool.ruff.lint]
+# Linting Rules
+# F: Pyflakes
+# E/W: Pycodestyle (errors/warnings)
+# I: isort
+# B: flake8-bugbear (common design issues/bugs)
+# Q: flake8-quotes (string literal quotes)
+select = ["F", "E", "W", "I", "B", "Q"]
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends"]
+
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

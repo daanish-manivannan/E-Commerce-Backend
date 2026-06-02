@@ -11,7 +11,15 @@ from .base import *  # noqa: F401, F403
 # Development-specific settings
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "127.0.0.1:8000", "127.0.0.1:8080"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "127.0.0.1:8000",
+    "127.0.0.1:8080",
+    "order-service",
+    "gateway",
+]
+
 
 # Database configuration for development
 DATABASES = {

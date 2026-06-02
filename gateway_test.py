@@ -3,10 +3,12 @@ import time
 import urllib.error
 import urllib.request
 
+import psycopg2
+
 # Target the Kong Gateway port 8080
 BASE_URL = "http://127.0.0.1:8080"
 EMAIL = f"test_{int(time.time())}@test.com"
-PASSWORD = "P@ssword"
+PASSWORD = "Stro0ng!@#Pass123"
 
 
 def make_request(path, method="GET", headers=None, data=None):
@@ -38,6 +40,25 @@ status, res = make_request(
 )
 print(f"Status: {status}, Response: {res}\n")
 
+print("--- 1.5. Verifying Email via Direct DB Token Retrieval ---")
+
+conn = psycopg2.connect("postgresql://ecom_user:ecom_password@localhost:5432/ecom_db")
+
+cur = conn.cursor()
+cur.execute(
+    "SELECT email_verification_token FROM identity_users WHERE email = %s;", (EMAIL,)
+)
+row = cur.fetchone()
+cur.close()
+conn.close()
+token_val = row[0] if row else None
+print(f"Retrieved email verification token: {token_val}")
+assert token_val is not None, "Failed to retrieve verification token!"
+
+v_status, v_res = make_request(f"/api/auth/verify-email/{token_val}", "GET")
+print(f"Verification Status: {v_status}, Response: {v_res}\n")
+assert v_status == 200, "Verification failed!"
+
 print("--- 2. Testing Login via Kong ---")
 status, res = make_request(
     "/api/auth/login", "POST", data={"email": EMAIL, "password": PASSWORD}
@@ -46,6 +67,7 @@ print(f"Status: {status}, Response: {res}")
 assert status == 200, "Login failed!"
 token = res["access_token"]
 print("Token acquired successfully.\n")
+
 
 print("--- 2.5. Testing Public Product Catalog (Anonymous) ---")
 status, res = make_request("/api/products/items/", "GET")

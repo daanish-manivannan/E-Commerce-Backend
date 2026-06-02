@@ -37,7 +37,7 @@ ENV STRIPE_PUBLIC_KEY=dummy
 ENV STRIPE_SECRET_KEY=dummy
 ENV STRIPE_WEBHOOK_SECRET=dummy
 # Signals settings.py to use a mock database during build
-ENV DB_IGNORE=True 
+ENV DB_IGNORE=True
 # ----------------------------------
 
 # Collect static files for WhiteNoise/Nginx

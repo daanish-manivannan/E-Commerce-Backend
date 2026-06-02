@@ -27,16 +27,16 @@ class KongJWTAuthentication(authentication.BaseAuthentication):
                 )
                 return (user, None)
             except Exception as e:
-                raise exceptions.AuthenticationFailed(f"Auth error: {str(e)}")
+                raise exceptions.AuthenticationFailed(f"Auth error: {str(e)}") from e
 
         # Try 2: Parse JWT from Authorization header
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth_header.startswith("Bearer "):
             return None  # No auth provided
 
-        # 🛡️ GATEWAY VERIFICATION CHECK: Enforce that Kong was the one who validated this token.
-        # Kong's JWT plugin sets X-Consumer-Username to the consumer's username (identity-service)
-        # upon successful JWT signature and expiration verification.
+        # 🛡️ GATEWAY VERIFICATION CHECK: Enforce that Kong validated this token.
+        # Kong's JWT plugin sets X-Consumer-Username to the consumer's username
+        # (identity-service) upon successful JWT verification.
         consumer_username = request.META.get("HTTP_X_CONSUMER_USERNAME")
         if not consumer_username or consumer_username != "identity-service":
             raise exceptions.AuthenticationFailed(
@@ -64,7 +64,7 @@ class KongJWTAuthentication(authentication.BaseAuthentication):
 
             return (user, None)
 
-        except jwt.DecodeError:
-            raise exceptions.AuthenticationFailed("Invalid token format")
+        except jwt.DecodeError as e:
+            raise exceptions.AuthenticationFailed("Invalid token format") from e
         except Exception as e:
-            raise exceptions.AuthenticationFailed(f"Auth error: {str(e)}")
+            raise exceptions.AuthenticationFailed(f"Auth error: {str(e)}") from e
