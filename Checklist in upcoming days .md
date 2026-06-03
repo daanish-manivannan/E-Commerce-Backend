@@ -101,11 +101,15 @@
 
 ## Gateway Security
 
-* [ ] **Kong Rate Limiting**: Configure fixed-window rate limiter
-  - /api/auth → higher limit (open)
-  - /api/orders → lower limit (protected)
+* [x] **Kong Rate Limiting**: Configure fixed-window rate limiter ✅
+  - `/api/auth` and `/api/token`: 5 req/sec, 100 req/min, 1,000 req/hour
+  - `/api/orders` and legacy `/orders/*`: 3 req/sec, 60 req/min, 5,000 req/hour
+  - `/api/products`: 20 req/sec, 50,000 req/hour
+  - `/api/orders/webhook`: 10 req/sec, 10,000 req/hour
 * [ ] **IP Throttling**: Track suspicious IPs
-* [ ] **Request Size Limits**: Prevent large payloads
+* [x] **Request Size Limits**: Prevent large payloads ✅
+  - Auth, token, product, order, and legacy checkout routes: 1 MB
+  - Stripe webhook route: 2 MB
 * [ ] **Abuse Protection**: Implement progressive delays on failed auth
 
 ## Secrets Management
@@ -286,8 +290,8 @@ You've successfully:
 
 ### Gateway Security Remaining
 
-- [ ] Route-specific Kong rate limits instead of one global limit
-- [ ] Request size limits for public and protected APIs
+- [x] Route-specific Kong rate limits instead of one global limit
+- [x] Request size limits for public and protected APIs
 - [ ] IP throttling / suspicious IP tracking strategy
 - [ ] Progressive delay or lockout after repeated failed auth attempts
 
@@ -376,7 +380,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ## Current Pain Points to Address
 
-- **Gateway Security**: Needs route-specific limits and request size limits
+- **Gateway Security**: Still needs IP throttling and progressive failed-auth protection
 - **Documentation**: Lacks ER diagram, flow diagrams
 - **Testing**: Limited test coverage, no integration tests
 - **Secrets**: Kong JWT credential is still hardcoded in `gateway/kong.yml`
@@ -408,7 +412,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 - [x] [Order & Catalog Service/config/settings/](Order%20&%20Catalog%20Service/config/settings/) - Settings split completed
 - [x] [Identity Service/main.py](Identity%20Service/main.py) - Refresh/logout/email verification/password reset implemented
 - [ ] [docker-compose.yml](docker-compose.yml) - Already good
-- [ ] [gateway/kong.yml](gateway/kong.yml) - Add route-specific rate limits and request size limits
+- [x] [gateway/kong.yml](gateway/kong.yml) - Route-specific rate limits and request size limits added
 - [ ] [API Spec Ecom 2.yaml](API%20Spec%20Ecom%202.yaml) - Update with new endpoints as Code
 
 * [ ] Terraform/Bicep configuration for Azure (if using cloud)

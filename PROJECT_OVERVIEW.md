@@ -104,14 +104,24 @@ Current Kong routes:
   -> Django order-service:8000, SimpleJWT compatibility route
 ```
 
-Kong plugins on protected order-service routes:
+Kong route-level protection:
 
 ```text
 jwt
-  -> Verifies JWT signature and expiration before request reaches Django.
+  -> Verifies JWT signature and expiration before protected requests reach Django.
+
+rate-limiting
+  -> /api/auth and /api/token: 5/sec, 100/min, 1,000/hour
+  -> /api/orders and /orders/*: 3/sec, 60/min, 5,000/hour
+  -> /api/products: 20/sec, 50,000/hour
+  -> /api/orders/webhook: 10/sec, 10,000/hour
+
+request-size-limiting
+  -> Auth, token, product, order, and legacy checkout routes: 1 MB
+  -> Stripe webhook route: 2 MB
 ```
 
-The gateway is now responsible for edge-level authentication on the configured order-service routes.
+The gateway is now responsible for edge-level authentication, route-specific throttling, and request-size protection on configured routes.
 
 ---
 
@@ -1294,6 +1304,8 @@ Public client
 | Access tokens were the only identity session primitive. | FastAPI now returns 15-minute access tokens plus 7-day refresh tokens, supports refresh rotation, and supports logout. | User sessions can be renewed or revoked without extending access-token lifetime. |
 | Refresh-token revocation needed shared state. | The identity service now connects to Redis through `REDIS_URL` and blacklists rotated/logout tokens until expiry. | Old refresh tokens cannot be reused after rotation or logout. |
 | Docker verification needed an explicit milestone. | The latest Docker verification commit confirms services can run healthy together. | The project has a documented baseline that PostgreSQL, Redis, Django, FastAPI, Celery worker, Celery beat, and Kong can boot as a stack. |
+| One global gateway rate limit treated all traffic the same. | `gateway/kong.yml` now applies different fixed-window limits to auth, products, orders, legacy checkout, and Stripe webhook routes. | Public and protected routes can be throttled according to their risk and expected traffic patterns. |
+| Large request bodies were not explicitly capped at the gateway. | Kong now applies `request-size-limiting` on public, protected, and webhook routes. | Oversized payloads can be rejected before they reach FastAPI or Django. |
 
 ## What Changed
 
@@ -1341,6 +1353,19 @@ Gateway route model
   Protected:
     /api/orders
     /orders/* legacy checkout path
+```
+
+```text
+Gateway abuse controls
+  Before:
+    One global rate limit applied to all traffic.
+
+  Now:
+    Auth and token routes have moderate fixed-window limits.
+    Product catalog has a higher public-read limit.
+    Order and legacy checkout routes have stricter protected-route limits.
+    Stripe webhook has a separate public callback limit.
+    Request payload size is capped before requests reach backend services.
 ```
 
 ```text
@@ -1415,6 +1440,7 @@ Webhook
 | Admin/static exposure | Django admin and static files exist, but Kong does not expose `/admin/` or `/static/`. | Keep internal-only if intentional, or add explicit Kong routes for admin workflows. |
 | Legacy checkout route | `/orders/*` is supported for API spec compatibility. | Prefer `/api/orders/<id>/create-checkout-session/` as the canonical route and keep legacy only if clients still need it. |
 | Multi-device sessions | The identity service currently stores one active refresh token on each user. | Add a separate refresh-token/session table if multiple devices should stay logged in independently. |
+| IP abuse handling | Kong now has route-level limits, but suspicious-IP tracking and progressive failed-auth delays are not implemented. | Add application-level failed-login tracking or an external edge/WAF policy. |
 
 ## Clean Target Architecture
 
@@ -1423,6 +1449,8 @@ Kong owns:
   - Public routing
   - JWT verification for protected APIs
   - Public exceptions for catalog and Stripe webhook routes
+  - Route-specific fixed-window rate limiting
+  - Request-size limiting
 
 FastAPI owns:
   - Identity users

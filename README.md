@@ -48,7 +48,7 @@ Kong replaced the earlier Nginx gateway so authentication, routing exceptions, a
 
 | Layer | Technology |
 | --- | --- |
-| API Gateway | Kong 3.4, DB-less declarative config |
+| API Gateway | Kong 3.4, DB-less declarative config, route-specific rate limits, request-size limits |
 | Identity Service | FastAPI, SQLAlchemy, bcrypt, python-jose, python-decouple, Redis client |
 | Commerce Service | Django, Django REST Framework, split settings, env validation, WhiteNoise |
 | Database | PostgreSQL 15 |
@@ -237,17 +237,31 @@ Implemented:
 
 ### Phase 12: Gateway Rate Limiting
 
-Added global gateway protection.
+Added gateway-level abuse controls.
 
 Implemented:
 
 ```text
-5 requests per second per IP
-10,000 requests per hour per IP
-policy: local
+/api/auth and /api/token
+  -> 5 requests/second, 100 requests/minute, 1,000 requests/hour
+  -> 1 MB payload limit
+
+/api/orders and /orders/*
+  -> 3 requests/second, 60 requests/minute, 5,000 requests/hour
+  -> 1 MB payload limit
+
+/api/products
+  -> 20 requests/second, 50,000 requests/hour
+  -> 1 MB payload limit
+
+/api/orders/webhook
+  -> 10 requests/second, 10,000 requests/hour
+  -> 2 MB payload limit
+
+All limits use Kong's local fixed-window policy.
 ```
 
-This is configured as a global Kong `rate-limiting` plugin.
+This is configured directly on Kong routes instead of as one global limit, so public catalog, auth, protected orders, and Stripe webhooks can each have different limits.
 
 ### Phase 13: Celery Result and Time Handling
 
@@ -589,7 +603,7 @@ python gateway_test.py
 ## Current Strengths
 
 - Clear separation between identity and ecommerce logic.
-- Kong centralizes public routing, JWT verification, and rate limiting.
+- Kong centralizes public routing, JWT verification, route-specific rate limiting, and request-size limiting.
 - Application services are internal-only behind the gateway.
 - FastAPI identity now supports short-lived access tokens, refresh-token rotation, and logout.
 - Redis blacklists revoked refresh tokens until expiry.
@@ -615,6 +629,7 @@ These are intentionally documented so future work is obvious:
 - `/orders/*` exists for legacy checkout compatibility; prefer `/api/orders/<id>/create-checkout-session/`.
 - Header injection from Kong to Django can be simplified or made explicit with a request-transformer on protected order routes.
 - Refresh-token persistence currently stores one active refresh token per identity user; supporting multiple devices would need a separate token/session table.
+- IP throttling and progressive failed-auth delay/lockout still need a dedicated implementation.
 
 ---
 
@@ -663,7 +678,7 @@ Django monolith
   -> Kong gateway migration
   -> edge JWT verification
   -> public route exceptions
-  -> gateway rate limiting
+  -> route-specific gateway rate limiting and request-size limiting
   -> split settings and environment validation
   -> refresh-token rotation and logout
 ```
