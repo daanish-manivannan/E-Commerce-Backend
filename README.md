@@ -624,6 +624,7 @@ python gateway_test.py
 These are intentionally documented so future work is obvious:
 
 - `gateway/kong.yml` contains a local JWT secret; use deployment-time injection for production.
+- Git history contains prior secret-like development/test values; rotate any matching real credentials before production use.
 - `/admin/` and `/static/` are not currently exposed through Kong.
 - `/api/users/` is still present in Django but not exposed through Kong.
 - `/orders/*` exists for legacy checkout compatibility; prefer `/api/orders/<id>/create-checkout-session/`.

@@ -114,8 +114,12 @@
 
 ## Secrets Management
 
-* [ ] **Environment Secret Review**: Audit all .env values
-* [ ] **Remove Secrets from Repository**: Check git history for exposed secrets
+* [ ] **Environment Secret Review**: Audit all local `.env` values
+* [x] **Secret Exposure History Check**: Check git history for exposed secrets ✅
+  - `gateway/kong.yml` JWT credential appeared in history
+  - Stripe test-looking key strings appeared in older README history
+  - Treat any committed development/test secrets as compromised and rotate them
+* [ ] **Remove Secrets from Repository**: Replace committed local JWT credential strategy
 * [ ] **Secret Rotation Strategy**: Plan for vault-based secret rotation
 
 ### Milestone

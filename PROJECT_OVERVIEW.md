@@ -1436,6 +1436,7 @@ Webhook
 | Area | Current note | Suggested direction |
 | --- | --- | --- |
 | JWT secret handling | FastAPI signs with `JWT_SECRET` from the environment. Kong currently stores the same secret directly in `gateway/kong.yml`. | Move the Kong secret injection to deployment-time configuration or clearly document it as local-only. |
+| Secret history | Git history contains the local Kong JWT credential and older Stripe test-looking strings. | Treat matching real credentials as compromised, rotate them, and use secret scanning before production. |
 | Header mapping | Kong validates JWTs, but the route does not currently add `X-User-Email` / `X-User-Id` headers on `/api/orders`. Django can still decode claims after Kong verification. | Either add a Kong request-transformer for protected order routes or simplify Django auth around the current verified-token fallback. |
 | Admin/static exposure | Django admin and static files exist, but Kong does not expose `/admin/` or `/static/`. | Keep internal-only if intentional, or add explicit Kong routes for admin workflows. |
 | Legacy checkout route | `/orders/*` is supported for API spec compatibility. | Prefer `/api/orders/<id>/create-checkout-session/` as the canonical route and keep legacy only if clients still need it. |
