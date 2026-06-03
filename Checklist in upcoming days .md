@@ -28,7 +28,7 @@
 
 * [x] Code quality tools added to requirements-dev.txt (ruff, black, isort, mypy, pre-commit)
 * [x] Run `ruff check` and `black --check` on both services (✅ ruff check passed)
-* [ ] Configure `pyproject.toml` with ruff rules (optional - can add later)
+* [x] Configure `pyproject.toml` with ruff rules
 * [x] Set up `.pre-commit-config.yaml` and install pre-commit hooks (✅ installed)
 * [x] Remove fallback SECRET_KEY from settings.py - use env-only validation (✅ done)
 * [x] Split Django settings: base.py, development.py, production.py (✅ completed)
@@ -79,9 +79,9 @@
 * [x] **Token Rotation**: Auto-rotate refresh tokens on each refresh ✅
   - Invalidate old refresh token
   - Generate new refresh token
-* [x] **Logout Endpoint**: Add /auth/logout (token blacklist) ✅
-  - Add token_blacklist table or use Redis
-  - Validate token not in blacklist on Kong JWT plugin
+* [x] **Logout Endpoint**: Add /auth/logout (refresh-token blacklist) ✅
+  - Uses Redis blacklist for refresh-token revocation
+  - Note: Kong validates access JWTs; refresh-token blacklist checks happen inside FastAPI
 * [x] **Token Revocation**: Clear user's active tokens ✅
 * [x] **Session Management**: Clear sessions on logout/password change ✅
 
@@ -264,57 +264,39 @@ You've successfully:
 
 ---
 
-## 🎯 Phase 1: Security Hardening - PLANNING PHASE
+## ✅ Phase 1 Authentication Core COMPLETE!
 
-### What Phase 1 Will Include
+**Completed on June 3, 2026**
 
-#### 1. Refresh Token System
-- Implement `/api/auth/refresh` endpoint in FastAPI
-- Return both access & refresh tokens on login
-- Auto-rotate refresh tokens on each refresh
-- Tokens expire at different rates (access: 15 min, refresh: 7 days)
-
-#### 2. Logout Functionality
-- Token blacklist system (Redis or database)
-- `/api/auth/logout` endpoint
-- Invalidate user's active tokens
-
-#### 3. Email Verification
-- Email verification on registration
-- `/api/auth/verify-email/{token}` endpoint
-- Prevent account use until verified
-
-#### 4. Password Reset Flow
-- `/api/auth/forgot-password` - Request reset
-- `/api/auth/reset-password` - Apply new password
-- Time-limited reset tokens (24 hours)
-
-### Timeline for Phase 1
-- **Estimated Duration**: 1-2 weeks (7-10 hours development)
-- **Refresh Tokens**: 3-4 hours (start here)
-- **Logout**: 1-2 hours
-- **Email Verification**: 2-3 hours
-- **Password Reset**: 2-3 hours
-- **Testing**: 1-2 hours
+You've successfully:
+- ✅ Added 15-minute access tokens
+- ✅ Added 7-day refresh tokens
+- ✅ Added `/api/auth/refresh` with refresh-token rotation
+- ✅ Added `/api/auth/logout` with Redis refresh-token blacklist
+- ✅ Added email verification on registration
+- ✅ Added `/api/auth/verify-email/{token}`
+- ✅ Added `/api/auth/forgot-password`
+- ✅ Added `/api/auth/reset-password`
+- ✅ Added password strength validation
+- ✅ Linked login/account activation to email verification
 
 ---
 
-## When Ready to Start Phase 1
+## 🎯 Next Immediate Focus: Finish Phase 1 Gateway + Secrets
 
-You have all the infrastructure in place:
-- ✅ Docker running
-- ✅ Code quality tools configured
-- ✅ Settings organized (dev/prod)
-- ✅ Git history clean
-- ✅ Environment validation working
+### Gateway Security Remaining
 
-**To start Phase 1, you'll need to:**
+- [ ] Route-specific Kong rate limits instead of one global limit
+- [ ] Request size limits for public and protected APIs
+- [ ] IP throttling / suspicious IP tracking strategy
+- [ ] Progressive delay or lockout after repeated failed auth attempts
 
-1. Create database migration for refresh token fields
-2. Update FastAPI models and routes
-3. Test with `api_tests.rest`
-4. Update Kong JWT configuration if needed
-5. Add logout endpoint and blacklist logic
+### Secrets Management Remaining
+
+- [ ] Audit `.env` values locally
+- [ ] Search git history for exposed secrets
+- [ ] Replace hardcoded Kong JWT secret with deployment-time injection strategy
+- [ ] Define secret rotation procedure for `JWT_SECRET`, `SECRET_KEY`, and Stripe keys
 
 ---
 
@@ -394,11 +376,11 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ## Current Pain Points to Address
 
-- **Configuration**: Settings.py has fallback SECRET_KEY (security issue)
+- **Gateway Security**: Needs route-specific limits and request size limits
 - **Documentation**: Lacks ER diagram, flow diagrams
 - **Testing**: Limited test coverage, no integration tests
-- **Code Quality**: No pre-commit hooks, linting not enforced
-- **Secrets**: .env not in .gitignore? Verify security
+- **Secrets**: Kong JWT credential is still hardcoded in `gateway/kong.yml`
+- **Sessions**: Current refresh-token model stores one active refresh token per user
 
 ## Quick Verification Commands
 
@@ -423,10 +405,10 @@ curl -X POST http://localhost:8080/api/auth/register \
 ## Files to Review / Update
 
 - [ ] [.env](.env) - Verify all required vars are set
-- [ ] [Order & Catalog Service/config/settings.py](Order%20&%20Catalog%20Service/config/settings.py) - Configuration cleanup
-- [ ] [Identity Service/main.py](Identity%20Service/main.py) - Add refresh token endpoint
+- [x] [Order & Catalog Service/config/settings/](Order%20&%20Catalog%20Service/config/settings/) - Settings split completed
+- [x] [Identity Service/main.py](Identity%20Service/main.py) - Refresh/logout/email verification/password reset implemented
 - [ ] [docker-compose.yml](docker-compose.yml) - Already good
-- [ ] [gateway/kong.yml](gateway/kong.yml) - May need JWT blacklist config update
+- [ ] [gateway/kong.yml](gateway/kong.yml) - Add route-specific rate limits and request size limits
 - [ ] [API Spec Ecom 2.yaml](API%20Spec%20Ecom%202.yaml) - Update with new endpoints as Code
 
 * [ ] Terraform/Bicep configuration for Azure (if using cloud)
