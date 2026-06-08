@@ -169,30 +169,43 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "fmt": "%(asctime)s %(levelname)s %(name)s %(message)s",
+            "datefmt": "%Y-%m-%dT%H:%M:%SZ",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "level": "ERROR",
-            "class": "logging.FileHandler",
-            "filename": "error.log",
-            "formatter": "verbose",
+            "formatter": "json",
         },
     },
     "root": {
-        "handlers": ["console", "file"],
+        "handlers": ["console"],
         "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "orders": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "products": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "users": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 

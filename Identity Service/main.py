@@ -1,11 +1,14 @@
 import asyncio
+import logging
 import secrets
+import sys
 from datetime import datetime, timedelta
 
 import httpx
 import redis
 from decouple import config  # 🔐 Swapped os.getenv for decouple
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from pythonjsonlogger import jsonlogger
 from sqlalchemy.orm import Session
 
 import auth_utils
@@ -28,6 +31,31 @@ redis_client = redis.from_url(
 
 # MUST include /orders/ in the path now
 ORDER_SERVICE_SYNC_URL = "http://order-service:8000/api/orders/users/sync/"
+
+
+# --- STRUCTURED JSON LOGGING SETUP ---
+def setup_logging() -> None:
+    """
+    Configure root logger to emit JSON lines to stdout.
+    Every log record will include: timestamp, level, message,
+    logger name, and any extra fields passed at call time.
+    """
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = jsonlogger.JsonFormatter(
+        fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%SZ",
+    )
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers = []
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
+
+
+setup_logging()
+
+logger = logging.getLogger("identity_service")
 
 # --- FAILED AUTH TRACKING CONFIGURATION ---
 # Email lockout: 5 failures on one email → locked for 15 min
@@ -133,8 +161,10 @@ async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get
     verification_url = (
         f"http://localhost:8080/api/auth/verify-email/{verification_token}"
     )
-    print(f"\n📨 [Simulated Email] Verification link for {user_data.email}:")
-    print(f"👉 {verification_url}\n")
+    logger.info(
+        "Verification email simulated",
+        extra={"email": user_data.email, "verification_url": verification_url},
+    )
 
     # 4. --- SHADOW USER SYNC (Service-to-Service) ---
     async with httpx.AsyncClient() as client:
@@ -155,14 +185,16 @@ async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get
             )
 
             # Log failure if sync isn't successful (don't block the user)
-            if sync_response.status_code not in [200, 201]:
-                print(
-                    "⚠️ Shadow User sync failed. " f"Status: {sync_response.status_code}"
-                )
-                print(f"Details: {sync_response.text}")
+            logger.warning(
+                "Shadow user sync failed",
+                extra={
+                    "status_code": sync_response.status_code,
+                    "detail": sync_response.text,
+                },
+            )
 
         except Exception as e:
-            print(f"❌ Connection to Order Service failed: {e}")
+            logger.error("Connection to Order Service failed", extra={"error": str(e)})
 
     return new_user
 
@@ -384,12 +416,15 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
                 timeout=5.0,
             )
             if sync_response.status_code not in [200, 201]:
-                print(
-                    "⚠️ Shadow User sync failed on verification status. "
-                    f"Status: {sync_response.status_code}"
+                logger.warning(
+                    "Shadow user sync failed on verification",
+                    extra={"status_code": sync_response.status_code},
                 )
         except Exception as e:
-            print(f"❌ Connection to Order Service failed on verification: {e}")
+            logger.error(
+                "Connection to Order Service failed on verification",
+                extra={"error": str(e)},
+            )
 
     return {"message": "Email verified successfully! Your account is now active."}
 
@@ -420,8 +455,10 @@ def forgot_password(
 
     # 4. Log simulated reset email
     reset_url = f"http://localhost:8080/api/auth/reset-password?token={reset_token}"
-    print(f"\n📨 [Simulated Email] Password reset link for {payload.email}:")
-    print(f"👉 {reset_url}\n")
+    logger.info(
+        "Password reset email simulated",
+        extra={"email": payload.email, "reset_url": reset_url},
+    )
 
     return {
         "message": "If the email is registered, a password reset link has been sent."

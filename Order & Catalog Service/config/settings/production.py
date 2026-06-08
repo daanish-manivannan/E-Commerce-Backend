@@ -50,36 +50,6 @@ SECURE_CONTENT_SECURITY_POLICY = {
 }
 
 # Production logging
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "level": "ERROR",
-            "class": "logging.FileHandler",
-            "filename": "error.log",
-            "formatter": "verbose",
-        },
-    },
-    "root": {
-        "handlers": ["console", "file"],
-        "level": "INFO",
-    },
-}
 
 # Restrict CORS for production
 CORS_ALLOWED_ORIGINS = config(
