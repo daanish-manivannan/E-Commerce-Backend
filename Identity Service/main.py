@@ -1,10 +1,11 @@
+import asyncio
 import secrets
 from datetime import datetime, timedelta
 
 import httpx
 import redis
 from decouple import config  # 🔐 Swapped os.getenv for decouple
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 import auth_utils
@@ -27,6 +28,62 @@ redis_client = redis.from_url(
 
 # MUST include /orders/ in the path now
 ORDER_SERVICE_SYNC_URL = "http://order-service:8000/api/orders/users/sync/"
+
+# --- FAILED AUTH TRACKING CONFIGURATION ---
+# Email lockout: 5 failures on one email → locked for 15 min
+# IP lockout: 20 failures from one IP → locked for 15 min
+# Progressive delay: kicks in at attempt 3, adds 2s pause before responding
+#
+# Redis key schema:
+#   auth:failed:email:<email>  → attempt count
+#   auth:lockout:email:<email> → "locked"
+#   auth:failed:ip:<ip>        → attempt count
+#   auth:lockout:ip:<ip>       → "locked"
+
+MAX_ATTEMPTS_EMAIL = 5
+MAX_ATTEMPTS_IP = 20
+WARN_THRESHOLD = 3
+LOCKOUT_SECONDS = 900  # 15 minutes
+PROGRESSIVE_DELAY_SECONDS = 2
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _check_lockout(identifier: str, kind: str) -> None:
+    lockout_key = f"auth:lockout:{kind}:{identifier}"
+    if redis_client.get(lockout_key):
+        ttl = redis_client.ttl(lockout_key)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many failed attempts. Try again in {max(ttl, 1)} seconds.",
+            headers={"Retry-After": str(max(ttl, 1))},
+        )
+
+
+def _record_failed_attempt(identifier: str, kind: str) -> int:
+    counter_key = f"auth:failed:{kind}:{identifier}"
+    lockout_key = f"auth:lockout:{kind}:{identifier}"
+    max_attempts = MAX_ATTEMPTS_EMAIL if kind == "email" else MAX_ATTEMPTS_IP
+
+    current = redis_client.incr(counter_key)
+    if current == 1:
+        redis_client.expire(counter_key, LOCKOUT_SECONDS)
+
+    if current >= max_attempts:
+        redis_client.setex(lockout_key, LOCKOUT_SECONDS, "locked")
+        redis_client.delete(counter_key)
+
+    return current
+
+
+def _clear_failed_attempts(identifier: str, kind: str) -> None:
+    redis_client.delete(f"auth:failed:{kind}:{identifier}")
+    redis_client.delete(f"auth:lockout:{kind}:{identifier}")
 
 
 @app.get("/")
@@ -111,37 +168,60 @@ async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get
 
 
 @app.post("/login", response_model=schemas.TokenResponse)
-def login(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+async def login(
+    user_data: schemas.UserCreate, request: Request, db: Session = Depends(get_db)
+):
     """
-    Authenticates user and returns a JWT access token and a refresh token.
-    Ensures email has been verified.
+    Authenticates user and returns a JWT access token and refresh token.
+    Applies IP + email lockout and progressive delay on repeated failures.
     """
-    # 1. Find the user
-    user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    client_ip = _get_client_ip(request)
 
-    # 2. Verify existence and password
-    if not user or not auth_utils.verify_password(
+    # 1. Pre-check lockouts before touching the DB
+    _check_lockout(client_ip, "ip")
+    _check_lockout(user_data.email, "email")
+
+    # 2. Credential check
+    user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    credential_valid = user is not None and auth_utils.verify_password(
         user_data.password, user.hashed_password
-    ):
+    )
+
+    if not credential_valid:
+        email_attempts = _record_failed_attempt(user_data.email, "email")
+        _record_failed_attempt(client_ip, "ip")
+
+        # Progressive delay before responding — slows brute force without full lockout yet
+        if WARN_THRESHOLD <= email_attempts < MAX_ATTEMPTS_EMAIL:
+            await asyncio.sleep(PROGRESSIVE_DELAY_SECONDS)
+
+        # Re-check in case this attempt just triggered lockout
+        _check_lockout(user_data.email, "email")
+        _check_lockout(client_ip, "ip")
+
+        # Generic message — never reveal whether the email exists
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
-    # 3. Enforce email verification check
+    # 3. Email verification gate
     if not user.email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email address not verified. Please verify your email first.",
         )
 
-    # 4. Create the tokens
+    # 4. Success — clear all failed attempt state
+    _clear_failed_attempts(user_data.email, "email")
+    _clear_failed_attempts(client_ip, "ip")
+
+    # 5. Issue tokens
     access_token = auth_utils.create_access_token(
         data={"sub": user.email, "user_id": user.id}
     )
     refresh_token = auth_utils.create_refresh_token()
 
-    # 5. Save refresh token to user record in DB
     user.refresh_token = refresh_token
     user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
     db.commit()

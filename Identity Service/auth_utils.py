@@ -18,7 +18,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 # --- JWT CONFIGURATION ---
-SECRET_KEY = os.getenv("JWT_SECRET", "fallback_do_not_use_in_prod")
+# Hard fail at startup if JWT_SECRET is missing or still set to the placeholder.
+# A missing secret means every token would be signed with a known public value —
+# which makes the entire auth system trivially bypassable.
+_raw_secret = os.getenv("JWT_SECRET", "")
+
+if not _raw_secret or _raw_secret == "fallback_do_not_use_in_prod":
+    raise RuntimeError(
+        "JWT_SECRET is not set or is still the placeholder value. "
+        'Generate one with: python -c "import secrets; print(secrets.token_hex(32))" '
+        "and add it to your .env file."
+    )
+
+SECRET_KEY: str = _raw_secret
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
@@ -33,13 +45,6 @@ def create_access_token(data: dict) -> str:
     # 1. Enforce the standardized UTC expiration time window
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-
-    # # 2. 🚨 CRITICAL KONG HOOK: The 'iss' claim must match the
-    # # Consumer key in kong.yml
-    # to_encode.update({"iss": "ecom_identity"})
-
-    # # 🔄 ALTERNATIVE HOOK: Force 'iss' to use actual SECRET_KEY value
-    # to_encode.update({"iss": SECRET_KEY})
 
     # 🟢 THE FIX: Use a stable, clean string literal for the lookup key identifier
     to_encode.update({"iss": "ecom_identity_v1"})

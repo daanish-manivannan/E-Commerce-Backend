@@ -40,6 +40,9 @@ htmlcov/
 # (Ignore local database mounts so they don't get committed)
 postgres_data/
 
+# Generated Kong config — contains real JWT secret, never commit
+gateway/kong.yml
+
 # =========================
 # IDEs & Editors
 # =========================

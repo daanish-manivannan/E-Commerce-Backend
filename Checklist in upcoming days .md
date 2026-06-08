@@ -124,7 +124,7 @@
 
 ### Milestone
 
-* [ ] Production Authentication Ready
+* [x] Production Authentication Ready ✅ - Completed June 4, 2026
 
 ---
 
@@ -296,15 +296,15 @@ You've successfully:
 
 - [x] Route-specific Kong rate limits instead of one global limit
 - [x] Request size limits for public and protected APIs
-- [ ] IP throttling / suspicious IP tracking strategy
-- [ ] Progressive delay or lockout after repeated failed auth attempts
+- [x] IP throttling / suspicious IP tracking strategy
+- [x] Progressive delay or lockout after repeated failed auth attempts
 
 ### Secrets Management Remaining
 
-- [ ] Audit `.env` values locally
-- [ ] Search git history for exposed secrets
-- [ ] Replace hardcoded Kong JWT secret with deployment-time injection strategy
-- [ ] Define secret rotation procedure for `JWT_SECRET`, `SECRET_KEY`, and Stripe keys
+- [X] Audit `.env` values locally
+- [x] Search git history for exposed secrets
+- [x] Replace hardcoded Kong JWT secret with deployment-time injection strategy
+- [x] Define secret rotation procedure for `JWT_SECRET`, `SECRET_KEY`, and Stripe keys
 
 ---
 
@@ -384,7 +384,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ## Current Pain Points to Address
 
-- **Gateway Security**: Still needs IP throttling and progressive failed-auth protection
+- **Gateway Security**: IP throttling and progressive failed-auth protection implemented ✅
 - **Documentation**: Lacks ER diagram, flow diagrams
 - **Testing**: Limited test coverage, no integration tests
 - **Secrets**: Kong JWT credential is still hardcoded in `gateway/kong.yml`
