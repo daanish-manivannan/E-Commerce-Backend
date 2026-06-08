@@ -109,8 +109,6 @@ services:
       - DATABASE_URL=postgresql://ecom_user:ecom_password@db:5432/ecom_db
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
