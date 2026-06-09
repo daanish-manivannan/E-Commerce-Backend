@@ -20,6 +20,8 @@ from .serializers import OrderSerializer
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+audit_logger = logging.getLogger("orders.audit")
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -119,7 +121,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         # 1. Save the record to the database (Status defaults to 'pending')
         order = serializer.save()
         logger.info(
-            f"📦 Order #{order.id} saved locally. Offloading async validation to Redis..."
+            "Order created",
+            extra={"order_id": order.id, "user_id": self.request.user.id},
+        )
+        audit_logger.info(
+            "ORDER_CREATED",
+            extra={"order_id": order.id, "user_id": self.request.user.id},
         )
 
         # # 2. Fire the combined worker pipeline entirely out-of-process
@@ -213,6 +220,10 @@ def stripe_webhook(request):
                     order.status = "paid"
                     order.save()
                     logger.info(f"✅ WEBHOOK SUCCESS: Order {order_id} marked as PAID.")
+                    audit_logger.info(
+                        "PAYMENT_ORDER_PAID",
+                        extra={"order_id": order_id},
+                    )
                 else:
                     logger.info(
                         f"ℹ️ Webhook received for Order {order_id}, but status was already {order.status}"
@@ -228,6 +239,10 @@ def stripe_webhook(request):
         session = event["data"]["object"]
         logger.warning(
             f"🚨 Payment Failed event received for Session {session.get('id')}"
+        )
+        audit_logger.warning(
+            "PAYMENT_FAILED",
+            extra={"stripe_session_id": session.get("id")},
         )
 
     return HttpResponse(status=200)

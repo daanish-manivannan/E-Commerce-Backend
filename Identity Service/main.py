@@ -56,6 +56,7 @@ def setup_logging() -> None:
 setup_logging()
 
 logger = logging.getLogger("identity_service")
+audit_logger = logging.getLogger("identity_service.audit")
 
 
 def error_response(code: str, message: str, status_code: int) -> HTTPException:
@@ -244,6 +245,14 @@ async def login(
     if not credential_valid:
         email_attempts = _record_failed_attempt(user_data.email, "email")
         _record_failed_attempt(client_ip, "ip")
+        audit_logger.warning(
+            "AUTH_LOGIN_FAILED",
+            extra={
+                "email": user_data.email,
+                "ip": client_ip,
+                "attempt": email_attempts,
+            },
+        )
 
         # Progressive delay before responding — slows brute force without full lockout yet
         if WARN_THRESHOLD <= email_attempts < MAX_ATTEMPTS_EMAIL:
@@ -271,6 +280,11 @@ async def login(
     # 4. Success — clear all failed attempt state
     _clear_failed_attempts(user_data.email, "email")
     _clear_failed_attempts(client_ip, "ip")
+
+    audit_logger.info(
+        "AUTH_LOGIN_SUCCESS",
+        extra={"email": user_data.email, "ip": client_ip},
+    )
 
     # 5. Issue tokens
     access_token = auth_utils.create_access_token(
@@ -388,6 +402,10 @@ def logout(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db)):
     user.refresh_token = None
     user.refresh_token_expiry = None
     db.commit()
+    audit_logger.info(
+        "AUTH_LOGOUT",
+        extra={"user_refresh_token_prefix": payload.refresh_token[:8]},
+    )
 
     return {"message": "Successfully logged out"}
 
@@ -448,7 +466,10 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
                 "Connection to Order Service failed on verification",
                 extra={"error": str(e)},
             )
-
+    audit_logger.info(
+        "AUTH_EMAIL_VERIFIED",
+        extra={"email": user.email},
+    )
     return {"message": "Email verified successfully! Your account is now active."}
 
 
@@ -543,6 +564,10 @@ def reset_password(
     user.password_reset_expiry = None
     db.commit()
 
+    audit_logger.info(
+        "AUTH_PASSWORD_RESET",
+        extra={"token_prefix": payload.token[:8]},
+    )
     return {
         "message": (
             "Password reset successfully! Please log in with your new password."
