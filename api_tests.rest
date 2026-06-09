@@ -5,12 +5,14 @@
 
 # Test user credentials (matches .env)
 @apiTestEmail = daanish@test.com
-@apiTestPassword = P@ssword
+@apiTestPassword = StrongerP@ss123
 
 
 ### 2. Register New User (FastAPI Identity Service)
 # This will also sync the shadow user inside Django's DB.
 # If the user is already registered, this might return a 400.
+# New users must verify the simulated email link from identity_service logs
+# before login succeeds.
 # @name register
 POST {{baseUrl}}/api/auth/register
 Content-Type: {{contentType}}

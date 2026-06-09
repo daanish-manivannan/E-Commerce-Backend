@@ -57,6 +57,24 @@ setup_logging()
 
 logger = logging.getLogger("identity_service")
 
+
+def error_response(code: str, message: str, status_code: int) -> HTTPException:
+    """
+    Returns a standardised HTTPException with a consistent error body.
+    Use this everywhere instead of raising HTTPException directly.
+
+    Shape: {"error": "ERROR_CODE", "message": "...", "timestamp": "..."}
+    """
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "error": code,
+            "message": message,
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
+    )
+
+
 # --- FAILED AUTH TRACKING CONFIGURATION ---
 # Email lockout: 5 failures on one email → locked for 15 min
 # IP lockout: 20 failures from one IP → locked for 15 min
@@ -88,7 +106,11 @@ def _check_lockout(identifier: str, kind: str) -> None:
         ttl = redis_client.ttl(lockout_key)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Too many failed attempts. Try again in {max(ttl, 1)} seconds.",
+            detail={
+                "error": "TOO_MANY_ATTEMPTS",
+                "message": f"Too many failed attempts. Try again in {max(ttl, 1)} seconds.",
+                "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            },
             headers={"Retry-After": str(max(ttl, 1))},
         )
 
@@ -137,8 +159,8 @@ async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get
     # 1. Check if user already exists in FastAPI DB
     db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        raise error_response(
+            "EMAIL_TAKEN", "Email already registered", status.HTTP_400_BAD_REQUEST
         )
 
     # 2. Hash password and save to local Identity DB as inactive
@@ -232,16 +254,18 @@ async def login(
         _check_lockout(client_ip, "ip")
 
         # Generic message — never reveal whether the email exists
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+        raise error_response(
+            "INVALID_CREDENTIALS",
+            "Incorrect email or password",
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     # 3. Email verification gate
     if not user.email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email address not verified. Please verify your email first.",
+        raise error_response(
+            "EMAIL_NOT_VERIFIED",
+            "Email address not verified. Please verify your email first.",
+            status.HTTP_403_FORBIDDEN,
         )
 
     # 4. Success — clear all failed attempt state
@@ -273,9 +297,10 @@ def refresh(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db))
     # 1. Check if the token is blacklisted in Redis
     is_blacklisted = redis_client.get(f"blacklist:token:{payload.refresh_token}")
     if is_blacklisted:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token is blacklisted",
+        raise error_response(
+            "TOKEN_BLACKLISTED",
+            "Refresh token is blacklisted",
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     # 2. Find the user with this refresh token
@@ -285,9 +310,8 @@ def refresh(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db))
         .first()
     )
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
+        raise error_response(
+            "INVALID_TOKEN", "Invalid refresh token", status.HTTP_401_UNAUTHORIZED
         )
 
     # 3. Check expiration
@@ -296,9 +320,8 @@ def refresh(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db))
         user.refresh_token = None
         user.refresh_token_expiry = None
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token has expired",
+        raise error_response(
+            "TOKEN_EXPIRED", "Refresh token has expired", status.HTTP_401_UNAUTHORIZED
         )
 
     # 4. Rotate tokens: generate new access and refresh tokens
@@ -343,7 +366,7 @@ def logout(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db)):
         .first()
     )
     if not user:
-        raise HTTPException(
+        raise error_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid refresh token",
         )
@@ -381,9 +404,8 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         .first()
     )
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification token",
+        raise error_response(
+            "INVALID_TOKEN", "Invalid verification token", status.HTTP_400_BAD_REQUEST
         )
 
     # 2. Check token expiry
@@ -391,9 +413,10 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         user.email_verification_expiry
         and user.email_verification_expiry < datetime.utcnow()
     ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired. Please register again.",
+        raise error_response(
+            "TOKEN_EXPIRED",
+            "Verification token has expired. Please register again.",
+            status.HTTP_400_BAD_REQUEST,
         )
 
     # 3. Mark user as verified and active
@@ -479,9 +502,10 @@ def reset_password(
         .first()
     )
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token",
+        raise error_response(
+            "INVALID_TOKEN",
+            "Invalid or expired reset token",
+            status.HTTP_400_BAD_REQUEST,
         )
 
     # 2. Check token expiry
@@ -489,9 +513,8 @@ def reset_password(
         user.password_reset_token = None
         user.password_reset_expiry = None
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired",
+        raise error_response(
+            "TOKEN_EXPIRED", "Reset token has expired", status.HTTP_400_BAD_REQUEST
         )
 
     # 3. Update password
