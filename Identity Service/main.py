@@ -142,6 +142,38 @@ async def read_root():
     return {"message": "Identity Service is online"}
 
 
+@app.get("/health/identity")
+async def health_check(db: Session = Depends(get_db)):
+    """
+    Health check endpoint. Verifies DB and Redis connectivity.
+    Returns 200 if all dependencies are healthy, 503 if any are down.
+    """
+    from fastapi.responses import JSONResponse
+
+    health = {"status": "healthy", "services": {}}
+    status_code = 200
+
+    # Check PostgreSQL
+    try:
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        health["services"]["postgres"] = "healthy"
+    except Exception as e:
+        health["services"]["postgres"] = f"unhealthy: {str(e)}"
+        health["status"] = "unhealthy"
+        status_code = 503
+
+    # Check Redis
+    try:
+        redis_client.ping()
+        health["services"]["redis"] = "healthy"
+    except Exception as e:
+        health["services"]["redis"] = f"unhealthy: {str(e)}"
+        health["status"] = "unhealthy"
+        status_code = 503
+
+    return JSONResponse(content=health, status_code=status_code)
+
+
 @app.get("/db-test")
 def test_db_connection(db: Session = Depends(get_db)):
     return {"status": "connected", "database": "ecom_db"}

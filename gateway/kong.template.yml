@@ -20,6 +20,15 @@ services:
           - name: request-size-limiting
             config:
               allowed_payload_size: 1
+      - name: identity-health-route
+        paths:
+          - /health/identity
+        strip_path: false
+        plugins:
+          - name: rate-limiting
+            config:
+              second: 10
+              policy: local
 
   # --- ORDER & CATALOG SERVICE (Django) ---
   - name: order-service
@@ -69,6 +78,15 @@ services:
           - name: request-size-limiting
             config:
               allowed_payload_size: 1
+      - name: django-health-route
+        paths:
+          - /health/django
+        strip_path: false
+        plugins:
+          - name: rate-limiting
+            config:
+              second: 10
+              policy: local
 
       - name: orders-protected-route
         # Protected route for creating and retrieving orders

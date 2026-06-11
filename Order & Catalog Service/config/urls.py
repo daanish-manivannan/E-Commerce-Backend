@@ -1,8 +1,47 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+
+def health_check(request):
+    """
+    Health check endpoint. Verifies DB and Redis connectivity.
+    Returns 200 if all dependencies are healthy, 503 if any are down.
+    """
+    import redis as redis_lib
+    from decouple import config
+    from django.db import connection
+
+    health = {"status": "healthy", "services": {}}
+    status_code = 200
+
+    # Check PostgreSQL
+    try:
+        connection.ensure_connection()
+        health["services"]["postgres"] = "healthy"
+    except Exception as e:
+        health["services"]["postgres"] = f"unhealthy: {str(e)}"
+        health["status"] = "unhealthy"
+        status_code = 503
+
+    # Check Redis
+    try:
+        redis_url = config("CELERY_BROKER_URL", default="redis://redis:6379/0")
+        r = redis_lib.from_url(redis_url, decode_responses=True)
+        r.ping()
+        health["services"]["redis"] = "healthy"
+    except Exception as e:
+        health["services"]["redis"] = f"unhealthy: {str(e)}"
+        health["status"] = "unhealthy"
+        status_code = 503
+
+    return JsonResponse(health, status=status_code)
+
+
 urlpatterns = [
+    # Health check
+    path("health/django", health_check, name="health-check"),
     path("admin/", admin.site.urls),
     # path('products/', include('products.urls', namespace='products')),
     # FIX: Prepended 'api/' to keep catalog routing unified under Nginx
