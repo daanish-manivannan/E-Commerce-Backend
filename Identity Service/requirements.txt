@@ -19,4 +19,6 @@ uvicorn[standard]
 # Gateway Related
 python-jose[cryptography]
 python-decouple==3.8
+prometheus-client==0.20.0
+starlette-prometheus==0.10.0
 python-json-logger==2.0.7

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django_prometheus.exports import ExportToDjangoView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -40,6 +41,12 @@ def health_check(request):
 
 
 urlpatterns = [
+    # Prometheus Metrics — direct view so URL resolves to exactly /metrics/django
+    # (using include("django_prometheus.urls") appends a /metrics sub-path, breaking the route)
+    path(
+        "metrics/django", ExportToDjangoView, name="prometheus-django-metrics"
+    ),  # This is working
+    # path("metrics/django/", include("django_prometheus.urls")), # This is not working
     # Health check
     path("health/django", health_check, name="health-check"),
     path("admin/", admin.site.urls),

@@ -8,8 +8,10 @@ import httpx
 import redis
 from decouple import config  # 🔐 Swapped os.getenv for decouple
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pythonjsonlogger import jsonlogger
 from sqlalchemy.orm import Session
+from starlette.responses import Response
 
 import auth_utils
 
@@ -22,6 +24,26 @@ from database import engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Identity Service")
+
+
+@app.middleware("http")
+async def track_requests(request: Request, call_next):
+    import time
+
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        status_code=response.status_code,
+    ).inc()
+    REQUEST_LATENCY.labels(
+        method=request.method,
+        endpoint=request.url.path,
+    ).observe(duration)
+    return response
+
 
 # Initialize Redis client (falls back to localhost for local development)
 redis_client = redis.from_url(
@@ -57,6 +79,25 @@ setup_logging()
 
 logger = logging.getLogger("identity_service")
 audit_logger = logging.getLogger("identity_service.audit")
+
+# --- PROMETHEUS METRICS ---
+REQUEST_COUNT = Counter(
+    "identity_requests_total",
+    "Total number of requests to the identity service",
+    ["method", "endpoint", "status_code"],
+)
+
+REQUEST_LATENCY = Histogram(
+    "identity_request_duration_seconds",
+    "Request latency in seconds",
+    ["method", "endpoint"],
+)
+
+AUTH_LOGIN_COUNTER = Counter(
+    "identity_auth_logins_total",
+    "Total login attempts",
+    ["result"],  # success or failure
+)
 
 
 def error_response(code: str, message: str, status_code: int) -> HTTPException:
@@ -174,6 +215,12 @@ async def health_check(db: Session = Depends(get_db)):
     return JSONResponse(content=health, status_code=status_code)
 
 
+@app.get("/metrics/identity")
+async def metrics():
+    """Prometheus metrics endpoint."""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 @app.get("/db-test")
 def test_db_connection(db: Session = Depends(get_db)):
     return {"status": "connected", "database": "ecom_db"}
@@ -285,6 +332,7 @@ async def login(
                 "attempt": email_attempts,
             },
         )
+        AUTH_LOGIN_COUNTER.labels(result="failure").inc()
 
         # Progressive delay before responding — slows brute force without full lockout yet
         if WARN_THRESHOLD <= email_attempts < MAX_ATTEMPTS_EMAIL:
@@ -317,6 +365,7 @@ async def login(
         "AUTH_LOGIN_SUCCESS",
         extra={"email": user_data.email, "ip": client_ip},
     )
+    AUTH_LOGIN_COUNTER.labels(result="success").inc()
 
     # 5. Issue tokens
     access_token = auth_utils.create_access_token(

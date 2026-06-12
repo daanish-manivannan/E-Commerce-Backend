@@ -8,6 +8,7 @@ psycopg-binary==3.3.3
 celery==5.6.3
 redis==7.4.0
 stripe==15.1.0
+django-prometheus==2.3.1
 
 # Transitive Core Dependencies
 amqp==5.3.1
