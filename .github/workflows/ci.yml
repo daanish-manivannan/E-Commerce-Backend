@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run ruff
+        run: ruff check .
+
+      - name: Run black check
+        run: black --check .
+
+      - name: Run isort check
+        run: isort --check-only .
+
+  test-django:
+    name: Django Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ecom_db
+          POSTGRES_USER: ecom_user
+          POSTGRES_PASSWORD: ecom_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Django dependencies
+        working-directory: "Order & Catalog Service"
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-django
+
+      - name: Run Django tests
+        working-directory: "Order & Catalog Service"
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          JWT_SECRET: ci-test-jwt-secret-64-chars-long-not-for-prod-use
+          POSTGRES_DB: ecom_db
+          POSTGRES_USER: ecom_user
+          POSTGRES_PASSWORD: ecom_password
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          STRIPE_PUBLIC_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          INTERNAL_CLUSTER_SECRET: ci-internal-secret
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          DEBUG: "True"
+        run: pytest
+
+  test-identity:
+    name: Identity Service Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ecom_db
+          POSTGRES_USER: ecom_user
+          POSTGRES_PASSWORD: ecom_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Identity Service dependencies
+        working-directory: "Identity Service"
+        run: pip install -r requirements.txt
+
+      - name: Check Identity Service imports
+        working-directory: "Identity Service"
+        env:
+          DATABASE_URL: postgresql://ecom_user:ecom_password@localhost:5432/ecom_db
+          JWT_SECRET: ci-test-jwt-secret-64-chars-long-not-for-prod-use
+          REDIS_URL: redis://localhost:6379/0
+          INTERNAL_CLUSTER_SECRET: ci-internal-secret
+        run: python -c "import main; print('Identity Service imports OK')"

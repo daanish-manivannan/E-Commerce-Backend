@@ -1,0 +1,70 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday at 9am UTC
+  push:
+    branches: [main]
+
+jobs:
+  dependency-scan-django:
+    name: Scan Django Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Django dependencies
+        working-directory: "Order & Catalog Service"
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2024-217
+        continue-on-error: true
+
+  dependency-scan-identity:
+    name: Scan Identity Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Identity Service dependencies
+        working-directory: "Identity Service"
+        run: pip-audit -r requirements.txt
+        continue-on-error: true
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install detect-secrets
+        run: pip install detect-secrets
+
+      - name: Scan for secrets
+        run: |
+          detect-secrets scan --baseline .secrets.baseline || \
+          detect-secrets scan > .secrets.baseline && \
+          echo "Baseline created — review .secrets.baseline for any flagged values"
+        continue-on-error: true

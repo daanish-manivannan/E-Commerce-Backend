@@ -62,3 +62,8 @@ gateway/kong.yml
 ehthumbs.db
 Thumbs.db
 .env
+
+
+celerybeat-schedule
+kong_logs.txt
+stripe.exe

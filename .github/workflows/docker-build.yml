@@ -1,0 +1,34 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-django:
+    name: Build Django Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Django Docker image
+        run: |
+          docker build \
+            -t ecom-order-service:${{ github.sha }} \
+            "./Order & Catalog Service"
+
+  build-identity:
+    name: Build Identity Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Identity Docker image
+        run: |
+          docker build \
+            -t ecom-identity-service:${{ github.sha }} \
+            "./Identity Service"
