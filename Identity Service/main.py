@@ -4,21 +4,20 @@ import secrets
 import sys
 from datetime import datetime, timedelta
 
+import auth_utils
 import httpx
+
+# Import your local modules
+import models
 import redis
+import schemas
+from database import engine, get_db
 from decouple import config  # 🔐 Swapped os.getenv for decouple
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pythonjsonlogger import jsonlogger
 from sqlalchemy.orm import Session
 from starlette.responses import Response
-
-import auth_utils
-
-# Import your local modules
-import models
-import schemas
-from database import engine, get_db
 
 # Create the database tables on startup
 models.Base.metadata.create_all(bind=engine)

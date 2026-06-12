@@ -2,7 +2,6 @@ from django.conf import settings
 
 # Create your models here.
 from django.db import models
-
 from products.models import Product
 
 

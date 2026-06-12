@@ -5,10 +5,10 @@ These settings are used for production deployment.
 Security and performance optimizations are enabled here.
 """
 
+from config.env_validator import validate_required_env_vars
+
 # Validate environment on startup for production
 from decouple import config
-
-from config.env_validator import validate_required_env_vars
 
 from .base import *  # noqa: F401, F403
 

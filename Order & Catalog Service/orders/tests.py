@@ -1,10 +1,9 @@
 # Create your tests here.
 import pytest
 from django.urls import reverse
-from rest_framework.test import APIClient
-
 from orders.models import Order, OrderItem
 from products.models import Category, Product
+from rest_framework.test import APIClient
 from users.models import CustomUser
 
 

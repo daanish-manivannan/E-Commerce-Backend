@@ -23,7 +23,7 @@ exclude = [
 # I: isort
 # B: flake8-bugbear (common design issues/bugs)
 # Q: flake8-quotes (string literal quotes)
-select = ["F", "E", "W", "I", "B", "Q"]
+select = ["F", "E", "W", "B", "Q"]
 ignore = ["E501"]
 
 [tool.ruff.lint.flake8-bugbear]

@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
-
 from database import Base
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 if TYPE_CHECKING:
     from typing import Any

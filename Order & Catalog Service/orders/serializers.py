@@ -1,7 +1,6 @@
 from django.db import transaction
-from rest_framework import serializers
-
 from products.models import Product
+from rest_framework import serializers
 
 from .models import Order, OrderItem
 from .tasks import fulfill_and_send_invoice_task
