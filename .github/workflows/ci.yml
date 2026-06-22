@@ -138,11 +138,18 @@ jobs:
         working-directory: "Identity Service"
         run: pip install -r requirements.txt
 
-      - name: Check Identity Service imports
+      - name: Install pytest dependencies
+        working-directory: "Identity Service"
+        run: pip install pytest==8.3.4 pytest-asyncio==0.24.0
+
+      - name: Create test database
+        run: PGPASSWORD=ecom_password psql -h localhost -U ecom_user -d ecom_db -c "CREATE DATABASE ecom_test_db;"
+
+      - name: Run Identity Service tests
         working-directory: "Identity Service"
         env:
-          DATABASE_URL: postgresql://ecom_user:ecom_password@localhost:5432/ecom_db
+          DATABASE_URL: postgresql://ecom_user:ecom_password@localhost:5432/ecom_test_db
           JWT_SECRET: ci-test-jwt-secret-64-chars-long-not-for-prod-use
-          REDIS_URL: redis://localhost:6379/0
+          REDIS_URL: redis://localhost:6379/1
           INTERNAL_CLUSTER_SECRET: ci-internal-secret
-        run: python -c "import main; print('Identity Service imports OK')"
+        run: pytest tests/ -v

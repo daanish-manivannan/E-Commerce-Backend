@@ -461,8 +461,9 @@ def logout(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db)):
     )
     if not user:
         raise error_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid refresh token",
+            "INVALID_TOKEN",
+            "Invalid refresh token",
+            status.HTTP_400_BAD_REQUEST,
         )
 
     # Add to Redis blacklist (with TTL equal to remaining expiry time, minimum 1 second)

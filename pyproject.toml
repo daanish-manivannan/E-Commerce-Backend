@@ -24,7 +24,8 @@ exclude = [
 # Q: flake8-quotes (string literal quotes)
 select = ["F", "E", "W", "B", "Q"]
 ignore = ["E501"]
-
+[tool.ruff.lint.per-file-ignores]
+"conftest.py" = ["E402"]
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends"]
 
