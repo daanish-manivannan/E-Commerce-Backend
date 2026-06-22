@@ -11,6 +11,10 @@ Covers:
 - Login response shape is correct
 """
 
+import os
+
+from jose import jwt
+
 
 class TestLogin:
 
@@ -111,8 +115,6 @@ class TestLogin:
         assert user.refresh_token_expiry is not None
 
     def test_login_access_token_is_valid_jwt(self, client, verified_user):
-        from jose import jwt
-
         response = client.post(
             "/login",
             json={
@@ -121,9 +123,10 @@ class TestLogin:
             },
         )
         token = response.json()["access_token"]
+        secret = os.environ["JWT_SECRET"]
         decoded = jwt.decode(
             token,
-            "test-secret-key-minimum-32-chars-long-for-testing",
+            secret,
             algorithms=["HS256"],
         )
         assert decoded["sub"] == verified_user["email"]
