@@ -211,11 +211,13 @@
 ## Testing Pipeline
 
 * [x] **Unit Tests**: Expand coverage beyond current tests
-* [x] **Identity Service Tests**: 44 tests covering registration, email verification, login, password reset, refresh rotation, logout — passing locally and in CI against ecom_test_db
+* [x] **Identity Service Tests**: 44 tests — registration, email verification, login, password reset, refresh rotation, logout — passing locally and in CI
+* [x] **Django Service Tests**: 26 tests — order creation, stock validation, price snapshots, ownership isolation, error response shape
 * [ ] **Integration Tests**: Test Kong + Django + FastAPI + Stripe integration
 * [ ] **Coverage Reports**: Upload to Codecov
 * [ ] **API Tests**: REST Client test suite (api_tests.rest)
 
+* [x] Test Coverage Phase ✅ - Completed June 22, 2026 — 70 tests across both services
 ## Security Pipeline
 
 * [x] **Dependency Scanning**: Use GitHub Dependabot
