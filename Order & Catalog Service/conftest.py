@@ -1,0 +1,12 @@
+import os
+
+# When running tests locally, PostgreSQL is reachable at localhost.
+# In Docker, it's reachable at 'db' (the service name).
+# CI sets POSTGRES_HOST explicitly via the workflow env vars.
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
+os.environ.setdefault("JWT_SECRET", "test-jwt-secret-minimum-32-chars-long")
+os.environ.setdefault("INTERNAL_CLUSTER_SECRET", "test-internal-secret")
+os.environ.setdefault("STRIPE_PUBLIC_KEY", "pk_test_placeholder")
+os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_placeholder")
+os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "whsec_placeholder")
