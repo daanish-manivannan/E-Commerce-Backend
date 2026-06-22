@@ -211,6 +211,7 @@
 ## Testing Pipeline
 
 * [x] **Unit Tests**: Expand coverage beyond current tests
+* [x] **Identity Service Tests**: 44 tests covering registration, email verification, login, password reset, refresh rotation, logout — passing locally and in CI against ecom_test_db
 * [ ] **Integration Tests**: Test Kong + Django + FastAPI + Stripe integration
 * [ ] **Coverage Reports**: Upload to Codecov
 * [ ] **API Tests**: REST Client test suite (api_tests.rest)
