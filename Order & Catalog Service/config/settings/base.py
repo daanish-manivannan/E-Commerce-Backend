@@ -158,6 +158,25 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"  # Added for tracking task success/failure states
 CELERY_TIMEZONE = "UTC"
 
+# CACHE CONFIGURATION
+# Uses Redis database index 2 to keep cache separate from:
+#   index 0 — Celery broker/result backend
+#   index 1 — test suite isolation (Identity Service tests)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://redis:6379/2"),
+        "OPTIONS": {
+            "db": "2",
+        },
+        "KEY_PREFIX": "ecom",
+        "TIMEOUT": 300,  # 5 minutes default TTL
+    }
+}
+
+CACHE_TTL_PRODUCTS = 300  # 5 minutes
+CACHE_TTL_CATEGORIES = 600  # 10 minutes — categories change less often
+
 
 # STRIPE & ENVIRONMENT VARIABLES ENVIRONMENT TRACKING
 STRIPE_PUBLIC_KEY = config("STRIPE_PUBLIC_KEY", default="dummy_public_key")

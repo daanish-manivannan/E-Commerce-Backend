@@ -493,4 +493,3 @@ Django monolith
 The result is a layered ecommerce backend with identity separation, gateway
 security, transactional order integrity, async side effects, and payment
 confirmation.
-# BookMyStay
