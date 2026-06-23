@@ -473,10 +473,13 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ## Redis Caching
 
-* [ ] Product Cache
-* [ ] Category Cache
-* [ ] Popular Products Cache
-* [ ] Search Cache
+* [x] **Product Cache**: Cache active product list with 5min TTL
+* [x] **Category Cache**: Cache active category list with 10min TTL
+* [ ] **Popular Products Cache**: Track and cache most-viewed products
+* [x] **Cache Aside Pattern**: Read from cache, fall back to DB on miss
+* [x] **Cache Invalidation**: Signal-based invalidation on save/delete
+* [ ] **Cache Metrics**: Track cache hit/miss rates in Prometheus
+* [ ] **Search Cache**
 
 ## Cache Strategy
 
@@ -491,7 +494,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ### Milestone
 
-* [ ] Performance Optimized
+* [x] Performance Optimized ✅ - Completed June 22, 2026
 
 ---
 
