@@ -5,6 +5,8 @@ These settings are used for production deployment.
 Security and performance optimizations are enabled here.
 """
 
+import os as _os
+
 from config.env_validator import validate_required_env_vars
 
 # Validate environment on startup for production
@@ -18,6 +20,14 @@ validate_required_env_vars()
 DEBUG = False
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+
+# Railway injects RAILWAY_PUBLIC_DOMAIN automatically on deployment
+
+
+_railway_domain = _os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+if _railway_domain:
+    ALLOWED_HOSTS.append(_railway_domain)
+    CSRF_TRUSTED_ORIGINS = [f"https://{_railway_domain}"]
 
 # Database configuration for production
 DATABASES = {

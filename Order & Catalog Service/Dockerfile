@@ -44,4 +44,5 @@ ENV DB_IGNORE=True
 RUN python manage.py collectstatic --noinput
 
 # Final command to run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
+# CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
+CMD gunicorn --bind 0.0.0.0:${PORT:-8000} config.wsgi:application --workers 2 --timeout 120
