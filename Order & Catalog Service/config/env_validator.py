@@ -18,9 +18,8 @@ def validate_required_env_vars() -> None:
     REQUIRED_VARS = {
         "SECRET_KEY": "Django internal secret key",
         "JWT_SECRET": "Shared JWT secret for auth services",
-        "POSTGRES_DB": "PostgreSQL database name",
-        "POSTGRES_USER": "PostgreSQL user account",
-        "POSTGRES_PASSWORD": "PostgreSQL password",
+        # POSTGRES_* vars not required on Railway — DATABASE_URL is injected automatically
+        # by the Railway Postgres plugin and parsed by dj-database-url in production.py.
         "STRIPE_PUBLIC_KEY": "Stripe publishable key",
         "STRIPE_SECRET_KEY": "Stripe secret key",
         "STRIPE_WEBHOOK_SECRET": "Stripe webhook secret",

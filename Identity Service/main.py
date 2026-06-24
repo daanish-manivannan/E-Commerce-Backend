@@ -51,7 +51,10 @@ redis_client = redis.from_url(
 
 
 # MUST include /orders/ in the path now
-ORDER_SERVICE_SYNC_URL = "http://order-service:8000/api/orders/users/sync/"
+ORDER_SERVICE_SYNC_URL = config(
+    "ORDER_SERVICE_SYNC_URL",
+    default="http://order-service:8000/api/orders/users/sync/",
+)
 
 
 # --- STRUCTURED JSON LOGGING SETUP ---

@@ -4,7 +4,9 @@ _transform: true
 services:
   # --- IDENTITY SERVICE (FastAPI) ---
   - name: identity-service
-    url: http://identity_service:8001
+    # Railway private network URL — resolves within the Railway project only.
+    # Docker Compose equivalent: http://identity_service:8001
+    url: http://identity-service.railway.internal:8001
     routes:
       - name: identity-routes
         paths:
@@ -41,7 +43,9 @@ services:
 
   # --- ORDER & CATALOG SERVICE (Django) ---
   - name: order-service
-    url: http://order-service:8000
+    # Railway private network URL — resolves within the Railway project only.
+    # Docker Compose equivalent: http://order-service:8000
+    url: http://order-service.railway.internal:8000
     routes:
       - name: order-webhook-route
         # Public webhook for Stripe callbacks (no authentication)

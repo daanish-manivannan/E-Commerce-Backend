@@ -3,7 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "gunicorn --bind 0.0.0.0:$PORT config.wsgi:application --workers 2 --timeout 120"
+startCommand = "python manage.py migrate --no-input && python manage.py collectstatic --no-input && gunicorn --bind 0.0.0.0:$PORT config.wsgi:application --workers 2 --timeout 120"
 healthcheckPath = "/health/django"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

@@ -149,9 +149,12 @@ REST_FRAMEWORK = {
 }
 
 # CELERY SETTINGS
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://redis:6379/0")
+# Railway injects REDIS_URL automatically. Use it as the default for Celery
+# so the same code works in Docker Compose (redis://redis:6379/0) and Railway.
+_redis_base = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=_redis_base)
 
-CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://redis:6379/0")
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=_redis_base)
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
@@ -165,7 +168,11 @@ CELERY_TIMEZONE = "UTC"
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://redis:6379/2"),
+        # REDIS_CACHE_URL lets you point the cache at a specific Redis DB index.
+        # Falls back to REDIS_URL (Railway plugin) then to the Docker Compose default.
+        "LOCATION": os.environ.get(
+            "REDIS_CACHE_URL", os.environ.get("REDIS_URL", "redis://redis:6379/2")
+        ),
         "OPTIONS": {
             "db": "2",
         },

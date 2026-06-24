@@ -1,0 +1,11 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Kong starts via the custom docker-entrypoint.sh — no extra startCommand needed.
+# Railway exposes the port set via PORT env var; Kong listens on 8000 internally.
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
