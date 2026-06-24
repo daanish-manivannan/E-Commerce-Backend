@@ -3,8 +3,8 @@ FROM python:3.11-slim as builder
 WORKDIR /app
 
 # Prevent Python from writing .pyc files and enable unbuffered logging
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies required for psycopg2 (Postgres driver)
 RUN apt-get update && apt-get install -y \
@@ -13,8 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies into a temporary folder (/install)
-# COPY requirements.txt .
-COPY ["Order & Catalog Service/requirements.txt", "."]
+COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --prefix=/install -r requirements.txt
 
@@ -27,8 +26,7 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 # Copy the actual Django project code
-# COPY . /app/
-COPY ["Order & Catalog Service/", "/app/"]
+COPY . /app/
 
 # --- BUILD-TIME DUMMY VARIABLES ---
 # These are strictly for the 'collectstatic' command below.
