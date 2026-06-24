@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies into a temporary folder (/install)
-COPY requirements.txt .
+# COPY requirements.txt .
+COPY ["Order & Catalog Service/requirements.txt", "."]
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --prefix=/install -r requirements.txt
 
@@ -26,7 +27,8 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 # Copy the actual Django project code
-COPY . /app/
+# COPY . /app/
+COPY ["Order & Catalog Service/", "/app/"]
 
 # --- BUILD-TIME DUMMY VARIABLES ---
 # These are strictly for the 'collectstatic' command below.
