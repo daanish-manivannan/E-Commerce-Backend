@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: ecom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: kong:3.4
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: "/usr/local/kong/kong.yml"
+            - name: KONG_PROXY_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_PROXY_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_ADMIN_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+          ports:
+            - containerPort: 8000
+            - containerPort: 8001
+          volumeMounts:
+            - name: kong-config
+              mountPath: /usr/local/kong
+      volumes:
+        - name: kong-config
+          configMap:
+            name: kong-declarative-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: ecom
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway
+  ports:
+    - name: proxy
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+    - name: admin
+      protocol: TCP
+      port: 8001
+      targetPort: 8001

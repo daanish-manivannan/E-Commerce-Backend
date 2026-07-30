@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: ecom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: ecom/analytics-service:latest
+          env:
+            - name: RABBITMQ_URL
+              value: "amqp://ecom_user:ecom_password@rabbitmq:5672//"
+            - name: DB_PATH
+              value: "/app/data/analytics.db"
+          volumeMounts:
+            - name: analytics-data
+              mountPath: /app/data
+      volumes:
+        - name: analytics-data
+          persistentVolumeClaim:
+            claimName: analytics-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-pvc
+  namespace: ecom
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

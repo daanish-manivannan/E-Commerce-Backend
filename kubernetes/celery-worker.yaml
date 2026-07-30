@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: ecom
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      containers:
+        - name: celery-worker
+          image: ecom/order-service:latest
+          command: ["celery", "-A", "config", "worker", "-l", "info"]
+          envFrom:
+            - configMapRef:
+                name: ecom-config
+            - secretRef:
+                name: ecom-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://ecom_user:$(POSTGRES_PASSWORD)@postgres:5432/ecom_db"
+            - name: CELERY_BROKER_URL
+              value: "amqp://ecom_user:ecom_password@rabbitmq:5672//"
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+            - name: ELASTICSEARCH_URL
+              value: "http://elasticsearch:9200"

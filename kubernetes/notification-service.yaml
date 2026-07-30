@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: ecom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: ecom/notification-service:latest
+          env:
+            - name: RABBITMQ_URL
+              value: "amqp://ecom_user:ecom_password@rabbitmq:5672//"
