@@ -33,10 +33,28 @@ def setup_db():
         CREATE TABLE IF NOT EXISTS daily_sales (
             date TEXT PRIMARY KEY,
             total_revenue REAL NOT NULL,
-            order_count INTEGER NOT NULL
+            order_count INTEGER NOT NULL,
+            successful_payments INTEGER DEFAULT 0,
+            failed_payments INTEGER DEFAULT 0
         )
     """
     )
+
+    # Try to add columns for existing databases
+    try:
+        cursor.execute(
+            "ALTER TABLE daily_sales ADD COLUMN successful_payments INTEGER DEFAULT 0"
+        )
+    except sqlite3.OperationalError:
+        pass  # Column might already exist
+
+    try:
+        cursor.execute(
+            "ALTER TABLE daily_sales ADD COLUMN failed_payments INTEGER DEFAULT 0"
+        )
+    except sqlite3.OperationalError:
+        pass  # Column might already exist
+
     conn.commit()
     conn.close()
 
@@ -63,7 +81,7 @@ def record_sale(amount: float):
         )
     else:
         cursor.execute(
-            "INSERT INTO daily_sales (date, total_revenue, order_count) VALUES (?, ?, ?)",
+            "INSERT INTO daily_sales (date, total_revenue, order_count, successful_payments, failed_payments) VALUES (?, ?, ?, 0, 0)",
             (today, amount, 1),
         )
 
@@ -71,6 +89,37 @@ def record_sale(amount: float):
     conn.close()
 
     logger.info(f"Recorded sale of {amount}. Data updated for {today}.")
+
+
+def record_payment(status: str):
+    today = datetime.utcnow().date().isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT successful_payments, failed_payments FROM daily_sales WHERE date = ?",
+        (today,),
+    )
+    row = cursor.fetchone()
+
+    if row:
+        succ = row[0] + (1 if status == "success" else 0)
+        fail = row[1] + (1 if status == "failed" else 0)
+        cursor.execute(
+            "UPDATE daily_sales SET successful_payments = ?, failed_payments = ? WHERE date = ?",
+            (succ, fail, today),
+        )
+    else:
+        succ = 1 if status == "success" else 0
+        fail = 1 if status == "failed" else 0
+        cursor.execute(
+            "INSERT INTO daily_sales (date, total_revenue, order_count, successful_payments, failed_payments) VALUES (?, 0, 0, ?, ?)",
+            (today, succ, fail),
+        )
+
+    conn.commit()
+    conn.close()
+    logger.info(f"Recorded payment {status}. Data updated for {today}.")
 
 
 # --- RabbitMQ Connection ---
@@ -118,13 +167,12 @@ def main():
     # Declare the queue for analytics
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
-    # Bind the queue to the exchange
-    # We want to listen to order events
-    routing_key = "order.*"
-    channel.queue_bind(
-        exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=routing_key
-    )
-    logger.info(f"Subscribed to {EXCHANGE_NAME} with routing_key '{routing_key}'")
+    # Bind the queue to the exchange for order and payment events
+    for routing_key in ["order.*", "payment.*"]:
+        channel.queue_bind(
+            exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=routing_key
+        )
+        logger.info(f"Subscribed to {EXCHANGE_NAME} with routing_key '{routing_key}'")
 
     def callback(ch, method, properties, body):
         routing_key = method.routing_key
@@ -139,8 +187,11 @@ def main():
                 # Parse total amount
                 total_str = event.get("total")
                 total_amount = float(total_str) if total_str else 0.0
-
                 record_sale(total_amount)
+            elif routing_key == "order.paid":
+                record_payment("success")
+            elif routing_key == "payment.failed":
+                record_payment("failed")
 
             # Acknowledge the message
             ch.basic_ack(delivery_tag=method.delivery_tag)
