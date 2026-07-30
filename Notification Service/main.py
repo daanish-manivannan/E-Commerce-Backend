@@ -66,6 +66,15 @@ def on_message(channel, method, properties, body):
             logger.info(
                 f"Simulating order confirmation email for order {order_id} (User: {user_id}, Total: {total_amount})"
             )
+        elif routing_key == "inventory.low":
+            product_name = event.get("product_name")
+            available = event.get("available_stock")
+            logger.warning(
+                f"ALERT: Low stock for '{product_name}'. Only {available} remaining."
+            )
+        elif routing_key == "inventory.out_of_stock":
+            product_name = event.get("product_name")
+            logger.warning(f"CRITICAL: '{product_name}' is completely OUT OF STOCK!")
         else:
             logger.info(f"Ignoring unhandled event type: {routing_key}")
 
@@ -93,10 +102,15 @@ def main():
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
     # Bind the queue to the exchange
-    # We want to listen to all order events
+    # We want to listen to order and inventory events
     channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key="order.*")
+    channel.queue_bind(
+        exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key="inventory.*"
+    )
 
-    logger.info(f"Subscribed to {EXCHANGE_NAME} with routing_key 'order.*'")
+    logger.info(
+        f"Subscribed to {EXCHANGE_NAME} with routing_keys 'order.*' and 'inventory.*'"
+    )
 
     channel.basic_consume(
         queue=QUEUE_NAME, on_message_callback=on_message, auto_ack=False

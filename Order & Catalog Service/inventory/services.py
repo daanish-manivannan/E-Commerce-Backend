@@ -1,3 +1,4 @@
+from config.events import publisher
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from products.models import Product
@@ -40,6 +41,33 @@ def reserve_stock(product_id, quantity, order_id=None):
         quantity=quantity,
         order_id=order_id,
         notes=f"Reserved {quantity} for order {order_id}",
+    )
+
+    # Publish inventory events if threshold crossed
+    def publish_inventory_events(prod_id, prod_name, current_stock):
+        if current_stock == 0:
+            publisher.publish(
+                "inventory.out_of_stock",
+                {
+                    "product_id": prod_id,
+                    "product_name": prod_name,
+                    "available_stock": current_stock,
+                },
+            )
+        elif current_stock < 5:
+            publisher.publish(
+                "inventory.low",
+                {
+                    "product_id": prod_id,
+                    "product_name": prod_name,
+                    "available_stock": current_stock,
+                },
+            )
+
+    transaction.on_commit(
+        lambda: publish_inventory_events(
+            inventory.product_id, inventory.product.name, inventory.available_stock
+        )
     )
 
     return inventory
