@@ -153,6 +153,20 @@ services:
         condition: service_healthy
     restart: always
 
+  analytics_service:
+    build:
+      context: "./Analytics Service"
+    container_name: ecom_analytics
+    environment:
+      - RABBITMQ_URL=amqp://ecom_user:ecom_password@rabbitmq:5672//
+      - DB_PATH=/app/data/analytics.db
+    volumes:
+      - analytics_data:/app/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
+
   # --- KONG API GATEWAY ---
   # Replaced Nginx to support edge-level Centralized JWT Verification for free
   gateway:
@@ -213,6 +227,7 @@ volumes:
   prometheus_data:
   grafana_data:
   rabbitmq_data:
+  analytics_data:
 
 # PREVIOUS NGINX CONFIGURATION
 
