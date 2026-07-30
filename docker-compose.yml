@@ -1,5 +1,23 @@
 services:
   # --- SHARED INFRASTRUCTURE ---
+  elasticsearch:
+    image: elasticsearch:8.13.0
+    container_name: ecom_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9201:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   db:
     image: postgres:15
     container_name: ecom_postgres
@@ -228,6 +246,7 @@ volumes:
   grafana_data:
   rabbitmq_data:
   analytics_data:
+  elasticsearch_data:
 
 # PREVIOUS NGINX CONFIGURATION
 

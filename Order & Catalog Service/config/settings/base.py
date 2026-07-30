@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "users",
     "orders",
     "inventory",
+    "search",
 ]
 
 MIDDLEWARE = [
@@ -245,3 +246,6 @@ LOGGING = {
 # SECURE_SSL_REDIRECT = True
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
+
+# ELASTICSEARCH CONFIGURATION
+ELASTICSEARCH_URL = config("ELASTICSEARCH_URL", default="http://elasticsearch:9200")
