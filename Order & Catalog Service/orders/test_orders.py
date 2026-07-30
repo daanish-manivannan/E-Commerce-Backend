@@ -56,24 +56,30 @@ def category(db):
 
 @pytest.fixture
 def product(category):
-    return Product.objects.create(
+    from inventory.models import Inventory
+
+    p = Product.objects.create(
         category=category,
         name="Wireless Mouse",
         price=50.00,
-        stock=10,
         is_active=True,
     )
+    Inventory.objects.create(product=p, available_stock=10)
+    return p
 
 
 @pytest.fixture
 def second_product(category):
-    return Product.objects.create(
+    from inventory.models import Inventory
+
+    p = Product.objects.create(
         category=category,
         name="Mechanical Keyboard",
         price=120.00,
-        stock=5,
         is_active=True,
     )
+    Inventory.objects.create(product=p, available_stock=5)
+    return p
 
 
 @pytest.mark.django_db
@@ -106,8 +112,10 @@ class TestOrderCreation:
             {"items": [{"product": product.id, "quantity": 3}]},
             format="json",
         )
-        product.refresh_from_db()
-        assert product.stock == 7
+        from inventory.models import Inventory
+
+        inventory = Inventory.objects.get(product=product)
+        assert inventory.available_stock == 7
 
     def test_price_snapshot_stored_not_current_price(self, auth_client, product):
         """
@@ -145,10 +153,12 @@ class TestOrderCreation:
         )
         assert response.status_code == 201
         assert OrderItem.objects.count() == 2
-        product.refresh_from_db()
-        second_product.refresh_from_db()
-        assert product.stock == 8
-        assert second_product.stock == 4
+        from inventory.models import Inventory
+
+        inv1 = Inventory.objects.get(product=product)
+        inv2 = Inventory.objects.get(product=second_product)
+        assert inv1.available_stock == 8
+        assert inv2.available_stock == 4
 
     def test_total_cost_calculated_correctly(self, auth_client, product):
         url = reverse("orders:order-list")
@@ -189,8 +199,10 @@ class TestOrderStockValidation:
             {"items": [{"product": product.id, "quantity": 20}]},
             format="json",
         )
-        product.refresh_from_db()
-        assert product.stock == 10
+        from inventory.models import Inventory
+
+        inventory = Inventory.objects.get(product=product)
+        assert inventory.available_stock == 10
 
     def test_partial_failure_rolls_back_entire_order(
         self, auth_client, product, second_product
@@ -212,8 +224,10 @@ class TestOrderStockValidation:
         )
         assert response.status_code == 400
         assert Order.objects.count() == 0
-        product.refresh_from_db()
-        assert product.stock == 10
+        from inventory.models import Inventory
+
+        inventory = Inventory.objects.get(product=product)
+        assert inventory.available_stock == 10
 
 
 @pytest.mark.django_db

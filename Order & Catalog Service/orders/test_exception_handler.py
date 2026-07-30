@@ -55,9 +55,10 @@ class TestExceptionHandlerShape:
 
     def test_400_has_standard_error_shape(self, auth_client):
         category = Category.objects.create(name="Test")
-        product = Product.objects.create(
-            category=category, name="Item", price=10.00, stock=1
-        )
+        from inventory.models import Inventory
+
+        product = Product.objects.create(category=category, name="Item", price=10.00)
+        Inventory.objects.create(product=product, available_stock=1)
         url = reverse("orders:order-list")
         # Request more than available stock to trigger a 400
         response = auth_client.post(

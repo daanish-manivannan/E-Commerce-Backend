@@ -6,6 +6,7 @@ from .models import Category, Product
 # 1. DEFINE THIS FIRST
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
+    stock = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -19,6 +20,11 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock",
             "is_active",
         ]
+
+    def get_stock(self, obj):
+        if hasattr(obj, "inventory"):
+            return obj.inventory.available_stock
+        return 0
 
 
 # 2. DEFINE THIS SECOND (Now it can safely reference ProductSerializer!)

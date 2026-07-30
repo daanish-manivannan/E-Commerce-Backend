@@ -1,5 +1,6 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from products.models import Product
+from inventory.services import reserve_stock
 from rest_framework import serializers
 
 from .models import Order, OrderItem
@@ -38,21 +39,19 @@ class OrderSerializer(serializers.ModelSerializer):
                 product_instance = item_data["product"]
                 quantity = item_data["quantity"]
 
-                # 📌 2. RE-QUERY AND LOCK THE ROW AT DATABASE LEVEL
-                # This explicitly blocks concurrency race conditions
-                product = Product.objects.select_for_update().get(
-                    id=product_instance.id
-                )
+                product = product_instance
 
-                # 📌 3. Atomic Evaluation & Deduct Combined
-                if product.stock < quantity:
-                    raise serializers.ValidationError(
-                        f"Not enough stock for {product.name}. Only {product.stock} left."
+                # 📌 3. Atomic Evaluation & Reserve Combined
+                # Use inventory service to securely reserve stock
+                try:
+                    reserve_stock(product.id, quantity, order.id)
+                except DjangoValidationError as e:
+                    exc = (
+                        serializers.ValidationError(e.message)
+                        if hasattr(e, "message")
+                        else serializers.ValidationError(e.messages)
                     )
-
-                # Deduct inventory securely
-                product.stock -= quantity
-                product.save()
+                    raise exc from e
 
                 # Lock in the line-item snapshot invoice metadata
                 OrderItem.objects.create(

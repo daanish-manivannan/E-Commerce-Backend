@@ -20,13 +20,15 @@ class TestOrderAPI:
         client.force_authenticate(user=user)
 
         # 2. Create a fake category and product for them to buy
+        from inventory.models import Inventory
+
         category = Category.objects.create(name="Electronics")
         product = Product.objects.create(
             category=category,
             name="Wireless Mouse",
             price=50.00,
-            stock=10,  # We start with exactly 10 in stock
         )
+        Inventory.objects.create(product=product, available_stock=10)
 
         return {"user": user, "product": product, "client": client}
 
@@ -54,8 +56,10 @@ class TestOrderAPI:
         assert order_item.price == 50.00
 
         # Assert 4: THE MOST CRITICAL TEST - Stock Deduction
-        product.refresh_from_db()  # We must reload the product to see the new database value
-        assert product.stock == 8  # 10 original - 2 bought = 8 remaining
+        from inventory.models import Inventory
+
+        inventory = Inventory.objects.get(product=product)
+        assert inventory.available_stock == 8  # 10 original - 2 bought = 8 remaining
 
     def test_checkout_fails_with_insufficient_stock(self, setup_data):
         client = setup_data["client"]
@@ -74,5 +78,7 @@ class TestOrderAPI:
         assert Order.objects.count() == 0
 
         # Assert 3: The stock was not accidentally deducted
-        product.refresh_from_db()
-        assert product.stock == 10
+        from inventory.models import Inventory
+
+        inventory = Inventory.objects.get(product=product)
+        assert inventory.available_stock == 10

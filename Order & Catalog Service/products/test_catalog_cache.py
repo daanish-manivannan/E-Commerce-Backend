@@ -35,13 +35,16 @@ def category(db):
 
 @pytest.fixture
 def product(category):
-    return Product.objects.create(
+    from inventory.models import Inventory
+
+    p = Product.objects.create(
         category=category,
         name="Wireless Mouse",
         price=50.00,
-        stock=10,
         is_active=True,
     )
+    Inventory.objects.create(product=p, available_stock=10)
+    return p
 
 
 @pytest.fixture
@@ -98,13 +101,15 @@ class TestProductCache:
         client.get(reverse("products:product-list"))
 
         # Create new product — invalidates cache
-        Product.objects.create(
+        from inventory.models import Inventory
+
+        p2 = Product.objects.create(
             category=category,
             name="New Product",
             price=25.00,
-            stock=5,
             is_active=True,
         )
+        Inventory.objects.create(product=p2, available_stock=5)
 
         # Next request should return new product
         response = client.get(reverse("products:product-list"))
@@ -120,20 +125,23 @@ class TestProductCache:
         assert cache.get(PRODUCT_LIST_CACHE_KEY) is None
 
     def test_inactive_products_not_in_cache(self, client, category):
-        Product.objects.create(
+        from inventory.models import Inventory
+
+        p_active = Product.objects.create(
             category=category,
             name="Active Product",
             price=10.00,
-            stock=5,
             is_active=True,
         )
-        Product.objects.create(
+        Inventory.objects.create(product=p_active, available_stock=5)
+
+        p_inactive = Product.objects.create(
             category=category,
             name="Inactive Product",
             price=10.00,
-            stock=5,
             is_active=False,
         )
+        Inventory.objects.create(product=p_inactive, available_stock=5)
         response = client.get(reverse("products:product-list"))
         names = [p["name"] for p in response.json()]
         assert "Active Product" in names
