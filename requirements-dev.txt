@@ -1,12 +1,12 @@
 # Code Quality Tooling
-ruff==0.3.4
-black==24.3.0
-isort==5.13.2
-mypy==1.9.0
-pre-commit==3.6.2
+ruff>=0.3.4
+black>=24.3.0
+isort>=5.13.2
+mypy>=1.9.0
+pre-commit>=3.6.2
 
 # Testing (Moved from Order & Catalog Service)
-pytest==9.0.3
-pytest-django==4.12.0
-iniconfig==2.3.0
-pluggy==1.6.0
+pytest>=9.0.3
+pytest-django>=4.12.0
+iniconfig>=2.3.0
+pluggy>=1.6.0

@@ -149,13 +149,14 @@ REST_FRAMEWORK = {
 }
 
 # CELERY SETTINGS
-# Railway injects REDIS_URL automatically. Use it as the default for Celery
-# so the same code works in Docker Compose (redis://redis:6379/0) and Railway.
+# Broker: RabbitMQ (Phase 9 — migrated from Redis for proper message queue semantics)
+# Result backend: stays on Redis — RabbitMQ is not recommended as a Celery result backend
 _redis_base = os.environ.get("REDIS_URL", "redis://redis:6379/0")
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=_redis_base)
+CELERY_BROKER_URL = config(
+    "CELERY_BROKER_URL", default="amqp://ecom_user:ecom_password@rabbitmq:5672//"
+)
 
-CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=_redis_base)
-
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"  # Added for tracking task success/failure states

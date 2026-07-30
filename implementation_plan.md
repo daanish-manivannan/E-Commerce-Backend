@@ -22,16 +22,6 @@ Kong → Identity Service (FastAPI) → Order Service (Django) → Celery Worker
 
 ---
 
-## Proposed Changes
-
-### Component 1 — Identity Service
-
-#### [MODIFY] [main.py](file:///d:/Projects/Django%20Project/ECom/Identity%20Service/main.py)
-
-The ORDER_SERVICE_SYNC_URL is hardcoded to the Docker Compose hostname `order-service:8000`. On Railway, internal services are reachable via `<service-name>.railway.internal`. Make it configurable via env var.
-
-**Line 54 — change:**
-```diff
 - ORDER_SERVICE_SYNC_URL = "http://order-service:8000/api/orders/users/sync/"
 + ORDER_SERVICE_SYNC_URL = config(
 +     "ORDER_SERVICE_SYNC_URL",

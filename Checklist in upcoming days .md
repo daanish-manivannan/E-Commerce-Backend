@@ -254,60 +254,31 @@
 
 # 🚀 WHERE TO RESUME - NEXT IMMEDIATE TASKS
 
-## ✅ Phase 0 COMPLETE!
+## ✅ Phase 9 Event-Driven Architecture (Publishers) COMPLETE!
 
-**Completed on June 1, 2026**
-
+**Recently Completed Tasks:**
 You've successfully:
-- ✅ Set up code quality tools (ruff, black, isort, mypy, pre-commit)
-- ✅ Split Django settings into development/production/base
-- ✅ Added environment variable validation
-- ✅ Fixed security issues (SECRET_KEY requirement)
-- ✅ **Verified Docker stack** with all services running and healthy:
-  - PostgreSQL (Healthy)
-  - Redis (Healthy)
-  - Kong Gateway (Healthy, routing traffic)
-  - Django Service (Running)
-  - FastAPI Identity (Running)
-  - Celery Worker & Beat (Running)
-
-**All services tested and confirmed working!**
+- ✅ Integrated `pika` for direct RabbitMQ connection
+- ✅ Built the `EventPublisher` inside Django
+- ✅ Hooked up Domain Events (`OrderCreated`, `OrderPaid`, `PaymentFailed`)
+- ✅ Created a placeholder Consumer to verify event routing
 
 ---
 
-## ✅ Phase 1 Authentication Core COMPLETE!
+## 🎯 Next Immediate Focus: Event Consumers or Inventory/Search
 
-**Completed on June 3, 2026**
+You can choose your next path:
 
-You've successfully:
-- ✅ Added 15-minute access tokens
-- ✅ Added 7-day refresh tokens
-- ✅ Added `/api/auth/refresh` with refresh-token rotation
-- ✅ Added `/api/auth/logout` with Redis refresh-token blacklist
-- ✅ Added email verification on registration
-- ✅ Added `/api/auth/verify-email/{token}`
-- ✅ Added `/api/auth/forgot-password`
-- ✅ Added `/api/auth/reset-password`
-- ✅ Added password strength validation
-- ✅ Linked login/account activation to email verification
+**Option A (Finish Phase 9):**
+Build out the actual consumer microservices:
+- [x] Notification Service (Send emails based on OrderCreated/OrderPaid events)
+- [ ] Analytics Service (Track sales/order volume from events)
 
----
+**Option B (Phase 8 Inventory V2):**
+- [ ] Build the Reservation System and Stock Movement Audit Trail
 
-## 🎯 Next Immediate Focus: Finish Phase 1 Gateway + Secrets
-
-### Gateway Security Remaining
-
-- [x] Route-specific Kong rate limits instead of one global limit
-- [x] Request size limits for public and protected APIs
-- [x] IP throttling / suspicious IP tracking strategy
-- [x] Progressive delay or lockout after repeated failed auth attempts
-
-### Secrets Management Remaining
-
-- [X] Audit `.env` values locally
-- [x] Search git history for exposed secrets
-- [x] Replace hardcoded Kong JWT secret with deployment-time injection strategy
-- [x] Define secret rotation procedure for `JWT_SECRET`, `SECRET_KEY`, and Stripe keys
+**Option C (Phase 7 Search):**
+- [ ] Integrate Elasticsearch/OpenSearch for the product catalog
 
 ---
 
@@ -553,27 +524,27 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ## RabbitMQ
 
-* [ ] RabbitMQ Setup
-* [ ] Producer Implementation
-* [ ] Consumer Implementation
+* [x] RabbitMQ Setup
+* [x] Producer Implementation
+* [x] Consumer Implementation (Placeholder)
 
 ## Domain Events
 
-* [ ] OrderCreated
-* [ ] OrderPaid
-* [ ] PaymentFailed
+* [x] OrderCreated
+* [x] OrderPaid
+* [x] PaymentFailed
 * [ ] InventoryReserved
 * [ ] InventoryLow
 
 ## Event Consumers
 
-* [ ] Notification Service
+* [x] Notification Service
 * [ ] Analytics Service
 * [ ] Inventory Service
 
 ### Milestone
 
-* [ ] Event Driven System
+* [x] Event Driven System
 
 ---
 

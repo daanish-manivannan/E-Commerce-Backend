@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # --- SHARED INFRASTRUCTURE ---
   db:
@@ -31,6 +29,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ecom_rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol port (Celery/kombu connect here)
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ecom_user
+      RABBITMQ_DEFAULT_PASS: ecom_password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # --- ORDER & CATALOG SERVICE (Django) ---
   order-service:
@@ -53,6 +68,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: always
 
   order_worker:
@@ -66,12 +83,14 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
-      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://ecom_user:ecom_password@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: always
 
@@ -117,6 +136,23 @@ services:
 
     restart: always
 
+  # --- NOTIFICATION SERVICE (Event Consumer) ---
+  notification_service:
+    build:
+      context: "./Notification Service"
+      dockerfile: Dockerfile
+    container_name: ecom_notification
+    volumes:
+      - "./Notification Service:/app"
+    env_file:
+      - .env
+    environment:
+      - RABBITMQ_URL=amqp://ecom_user:ecom_password@rabbitmq:5672//
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
+
   # --- KONG API GATEWAY ---
   # Replaced Nginx to support edge-level Centralized JWT Verification for free
   gateway:
@@ -150,7 +186,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=7d"
     ports:
-      - "9090:9090"
+      - "9200:9090"
     depends_on:
       - order-service
       - identity_service
@@ -176,6 +212,7 @@ volumes:
   django_static:
   prometheus_data:
   grafana_data:
+  rabbitmq_data:
 
 # PREVIOUS NGINX CONFIGURATION
 

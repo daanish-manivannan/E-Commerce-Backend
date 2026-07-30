@@ -11,3 +11,14 @@ os.environ.setdefault("INTERNAL_CLUSTER_SECRET", "test-internal-secret")
 os.environ.setdefault("STRIPE_PUBLIC_KEY", "pk_test_placeholder")
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_placeholder")
 os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "whsec_placeholder")
+
+from unittest.mock import patch
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def mock_event_publisher():
+    """Mock the EventPublisher so tests don't try to connect to RabbitMQ."""
+    with patch("config.events.publisher.publish") as mock_publish:
+        yield mock_publish

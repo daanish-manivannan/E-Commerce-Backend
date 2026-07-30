@@ -1,6 +1,7 @@
 import logging
 
 import stripe
+from config.events import publisher
 from decouple import config
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -129,8 +130,19 @@ class OrderViewSet(viewsets.ModelViewSet):
             extra={"order_id": order.id, "user_id": self.request.user.id},
         )
 
-        # # 2. Fire the combined worker pipeline entirely out-of-process
+        # 2. Fire the combined worker pipeline entirely out-of-process
         # fulfill_and_send_invoice_task.delay(order.id)
+
+        # 3. Publish Domain Event
+        publisher.publish(
+            "order.created",
+            {
+                "order_id": order.id,
+                "user_id": self.request.user.id,
+                "total": str(order.total_cost),
+                "timestamp": order.created_at.isoformat(),
+            },
+        )
 
     @action(detail=True, methods=["post"], url_path="create-checkout-session")
     def create_checkout_session(self, request, pk=None):
@@ -224,6 +236,18 @@ def stripe_webhook(request):
                         "PAYMENT_ORDER_PAID",
                         extra={"order_id": order_id},
                     )
+
+                    # Publish Domain Event
+                    from django.utils import timezone
+
+                    publisher.publish(
+                        "order.paid",
+                        {
+                            "order_id": order.id,
+                            "stripe_session_id": session.get("id"),
+                            "timestamp": timezone.now().isoformat(),
+                        },
+                    )
                 else:
                     logger.info(
                         f"ℹ️ Webhook received for Order {order_id}, but status was already {order.status}"
@@ -243,6 +267,14 @@ def stripe_webhook(request):
         audit_logger.warning(
             "PAYMENT_FAILED",
             extra={"stripe_session_id": session.get("id")},
+        )
+
+        # Publish Domain Event
+        publisher.publish(
+            "order.payment_failed",
+            {
+                "stripe_session_id": session.get("id"),
+            },
         )
 
     return HttpResponse(status=200)
