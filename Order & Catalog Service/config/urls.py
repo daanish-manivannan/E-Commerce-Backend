@@ -59,6 +59,8 @@ urlpatterns = [
     path("api/orders/", include("orders.urls", namespace="orders")),
     # NEW: Search API Endpoints
     path("api/search/", include("search.urls")),
+    # NEW: Support API Endpoints
+    path("api/support/", include("support.urls")),
     # JWT Auth Endpoints
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

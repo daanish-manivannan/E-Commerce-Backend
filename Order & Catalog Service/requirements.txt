@@ -56,3 +56,8 @@ elasticsearch>=8.13.0
 elasticsearch-dsl>=8.13.0
 tenacity
 pybreaker
+
+pgvector
+openai
+langchain
+langchain-openai

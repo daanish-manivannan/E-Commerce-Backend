@@ -1,7 +1,10 @@
 from elasticsearch_dsl.query import MultiMatch
+from pgvector.django import CosineDistance
+from products.models import Product
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from search.documents import ProductDocument
+from search.semantic import get_embedding
 
 
 class ProductSearchView(APIView):
@@ -39,6 +42,44 @@ class ProductSearchView(APIView):
                     "price": hit.price,
                     "category": hit.category,
                     "is_active": hit.is_active,
+                }
+            )
+
+        return Response(results)
+
+
+class SemanticSearchView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        query = request.GET.get("q", "")
+        if not query:
+            return Response([])
+
+        embedding = get_embedding(query)
+        if not embedding:
+            return Response(
+                {"error": "Failed to generate embedding for query"}, status=500
+            )
+
+        # Use CosineDistance to find most similar products
+        # We order by distance ascending (closest first)
+        products = (
+            Product.objects.filter(is_active=True)
+            .annotate(distance=CosineDistance("embedding", embedding))
+            .order_by("distance")[:10]
+        )
+
+        results = []
+        for product in products:
+            results.append(
+                {
+                    "id": product.id,
+                    "name": product.name,
+                    "description": product.description,
+                    "price": float(product.price),
+                    "category": product.category.name if product.category else None,
+                    "distance": product.distance,
                 }
             )
 

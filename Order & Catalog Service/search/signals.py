@@ -1,9 +1,11 @@
+import logging
+
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from products.models import Product
+from products.tasks import generate_product_embedding
 from search.documents import ProductDocument
-from tenacity import retry, wait_exponential, stop_after_attempt
-import logging
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 @retry(
     wait=wait_exponential(multiplier=1, min=2, max=10),
     stop=stop_after_attempt(3),
-    reraise=True
+    reraise=True,
 )
 def index_product(sender, instance, **kwargs):
     doc = ProductDocument(
@@ -26,12 +28,15 @@ def index_product(sender, instance, **kwargs):
     )
     doc.save()
 
+    # Generate Vector Embedding for Semantic Search
+    generate_product_embedding.delay(instance.id)
+
 
 @receiver(post_delete, sender=Product)
 @retry(
     wait=wait_exponential(multiplier=1, min=2, max=10),
     stop=stop_after_attempt(3),
-    reraise=True
+    reraise=True,
 )
 def delete_product_from_index(sender, instance, **kwargs):
     try:
