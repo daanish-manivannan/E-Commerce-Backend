@@ -54,3 +54,5 @@ pytest-asyncio>=0.24.0
 
 elasticsearch>=8.13.0
 elasticsearch-dsl>=8.13.0
+tenacity
+pybreaker

@@ -164,8 +164,17 @@ def main():
         exchange=EXCHANGE_NAME, exchange_type="topic", durable=True
     )
 
-    # Declare the queue for analytics
-    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    # Set up Dead Letter Exchange and Queue
+    channel.exchange_declare(exchange="ecom.dlx", exchange_type="direct", durable=True)
+    channel.queue_declare(queue="analytics.dlq", durable=True)
+    channel.queue_bind(exchange="ecom.dlx", queue="analytics.dlq", routing_key=QUEUE_NAME)
+
+    # Declare the queue with DLX arguments
+    arguments = {
+        "x-dead-letter-exchange": "ecom.dlx",
+        "x-dead-letter-routing-key": QUEUE_NAME
+    }
+    channel.queue_declare(queue=QUEUE_NAME, durable=True, arguments=arguments)
 
     # Bind the queue to the exchange for order and payment events
     for routing_key in ["order.*", "payment.*"]:
@@ -194,12 +203,14 @@ def main():
                 record_payment("failed")
 
             # Acknowledge the message
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+            if not ch._impl.is_closed:
+                ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception as e:
             logger.error(f"Failed to process event: {e}", exc_info=True)
             # Requeue if it's a transient failure, but for safety in this demo we'll ack it or nack without requeue
-            # to prevent infinite loop of bad messages.
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            # to prevent infinite loop of bad messages. Nack without requeue routes to DLQ.
+            if not ch._impl.is_closed:
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)

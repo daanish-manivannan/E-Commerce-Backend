@@ -2,9 +2,18 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from products.models import Product
 from search.documents import ProductDocument
+from tenacity import retry, wait_exponential, stop_after_attempt
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Product)
+@retry(
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(3),
+    reraise=True
+)
 def index_product(sender, instance, **kwargs):
     doc = ProductDocument(
         meta={"id": instance.id},
@@ -19,6 +28,11 @@ def index_product(sender, instance, **kwargs):
 
 
 @receiver(post_delete, sender=Product)
+@retry(
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(3),
+    reraise=True
+)
 def delete_product_from_index(sender, instance, **kwargs):
     try:
         doc = ProductDocument.get(id=instance.id)

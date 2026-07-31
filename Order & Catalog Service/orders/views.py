@@ -13,6 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 from .models import Order
 from .serializers import OrderSerializer
@@ -177,15 +178,24 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # 3. Create Clean Stripe Session
-            checkout_session = stripe.checkout.Session.create(
-                payment_method_types=["card"],
-                line_items=line_items,
-                mode="payment",
-                success_url=request.build_absolute_uri("/api/orders/?success=true"),
-                cancel_url=request.build_absolute_uri("/api/orders/?canceled=true"),
-                client_reference_id=str(order.id),
+            # 3. Create Clean Stripe Session (with Retries)
+            @retry(
+                wait=wait_exponential(multiplier=1, min=2, max=10),
+                stop=stop_after_attempt(3),
+                retry=retry_if_exception_type(stripe.error.StripeError),
+                reraise=True
             )
+            def _create_stripe_session(line_items_data, order_id_str):
+                return stripe.checkout.Session.create(
+                    payment_method_types=["card"],
+                    line_items=line_items_data,
+                    mode="payment",
+                    success_url=request.build_absolute_uri("/api/orders/?success=true"),
+                    cancel_url=request.build_absolute_uri("/api/orders/?canceled=true"),
+                    client_reference_id=order_id_str,
+                )
+
+            checkout_session = _create_stripe_session(line_items, str(order.id))
 
             logger.info(f"💳 Stripe Session created for Order {order.id}")
             return Response({"checkout_url": checkout_session.url})
@@ -259,10 +269,10 @@ def stripe_webhook(request):
                 "⚠️ Webhook received a session without a client_reference_id."
             )
 
-    elif event["type"] == "payment_intent.payment_failed":
+    elif event["type"] in ["payment_intent.payment_failed", "checkout.session.expired", "checkout.session.async_payment_failed"]:
         session = event["data"]["object"]
         logger.warning(
-            f"🚨 Payment Failed event received for Session {session.get('id')}"
+            f"🚨 Payment Failed/Expired event received for Session {session.get('id')}"
         )
         audit_logger.warning(
             "PAYMENT_FAILED",
@@ -270,10 +280,12 @@ def stripe_webhook(request):
         )
 
         # Publish Domain Event
+        order_id = session.get("client_reference_id")
         publisher.publish(
-            "order.payment_failed",
+            "payment.failed", # Note: using payment.failed to match Analytics service
             {
                 "stripe_session_id": session.get("id"),
+                "order_id": order_id
             },
         )
 

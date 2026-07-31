@@ -83,9 +83,13 @@ def on_message(channel, method, properties, body):
             "Error processing message",
             extra={"error": str(e), "body": body.decode("utf-8")},
         )
+        # Nack without requeue sends it to the DLX
+        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        return
     finally:
-        # Acknowledge the message so it is removed from the queue
-        channel.basic_ack(delivery_tag=method.delivery_tag)
+        # Acknowledge the message if it was processed successfully
+        if not channel._impl.is_closed:
+            channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
 def main():
@@ -98,8 +102,17 @@ def main():
         exchange=EXCHANGE_NAME, exchange_type="topic", durable=True
     )
 
-    # Declare the queue
-    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    # Set up Dead Letter Exchange and Queue
+    channel.exchange_declare(exchange="ecom.dlx", exchange_type="direct", durable=True)
+    channel.queue_declare(queue="notification.dlq", durable=True)
+    channel.queue_bind(exchange="ecom.dlx", queue="notification.dlq", routing_key=QUEUE_NAME)
+
+    # Declare the queue with DLX arguments
+    arguments = {
+        "x-dead-letter-exchange": "ecom.dlx",
+        "x-dead-letter-routing-key": QUEUE_NAME
+    }
+    channel.queue_declare(queue=QUEUE_NAME, durable=True, arguments=arguments)
 
     # Bind the queue to the exchange
     # We want to listen to order and inventory events

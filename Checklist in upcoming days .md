@@ -272,7 +272,7 @@ You can choose your next path:
 **Option A (Finish Phase 9):**
 Build out the actual consumer microservices:
 - [x] Notification Service (Send emails based on OrderCreated/OrderPaid events)
-- [ ] Analytics Service (Track sales/order volume from events)
+- [x] Analytics Service (Track sales/order volume from events)
 
 **Option B (Phase 8 Inventory V2):**
 - [ ] Build the Reservation System and Stock Movement Audit Trail
@@ -539,7 +539,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 ## Event Consumers
 
 * [x] Notification Service
-* [ ] Analytics Service
+* [x] Analytics Service
 * [ ] Inventory Service
 
 ### Milestone
