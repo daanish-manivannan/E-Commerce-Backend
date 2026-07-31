@@ -1,6 +1,6 @@
 import os
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response

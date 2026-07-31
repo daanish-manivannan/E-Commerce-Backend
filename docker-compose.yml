@@ -190,6 +190,7 @@ services:
   gateway:
     image: kong:3.4
     container_name: ecom_gateway
+    command: /bin/sh -c "sed \"s/__JWT_SECRET__/$${JWT_SECRET}/g\" /usr/local/kong/kong_template.yml > /usr/local/kong/kong.yml && /docker-entrypoint.sh kong docker-start"
     environment:
       KONG_DATABASE: "off"                             # Force Kong into DB-less/Declarative mode
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml # Target mount path inside the container
@@ -201,7 +202,7 @@ services:
     ports:
       - "8080:8000"                                      # Proxy external port 80 requests into Kong's internal port 8000
     volumes:
-      - ./gateway/kong.yml:/usr/local/kong/kong.yml:ro
+      - ./gateway/kong.yml:/usr/local/kong/kong_template.yml:ro
     depends_on:
       - identity_service
       - order-service

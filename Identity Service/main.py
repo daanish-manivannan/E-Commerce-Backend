@@ -373,15 +373,18 @@ async def login(
     access_token = auth_utils.create_access_token(
         data={"sub": user.email, "user_id": user.id}
     )
-    refresh_token = auth_utils.create_refresh_token()
+    refresh_token_str = auth_utils.create_refresh_token()
+    expiry = datetime.utcnow() + timedelta(days=7)
 
-    user.refresh_token = refresh_token
-    user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
+    new_refresh_token = models.RefreshToken(
+        user_id=user.id, token=refresh_token_str, expiry=expiry
+    )
+    db.add(new_refresh_token)
     db.commit()
 
     return {
         "access_token": access_token,
-        "refresh_token": refresh_token,
+        "refresh_token": refresh_token_str,
         "token_type": "bearer",
     }
 
@@ -400,22 +403,23 @@ def refresh(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db))
             status.HTTP_401_UNAUTHORIZED,
         )
 
-    # 2. Find the user with this refresh token
-    user = (
-        db.query(models.User)
-        .filter(models.User.refresh_token == payload.refresh_token)
+    # 2. Find the refresh token in the db
+    refresh_token_obj = (
+        db.query(models.RefreshToken)
+        .filter(models.RefreshToken.token == payload.refresh_token)
         .first()
     )
-    if not user:
+    if not refresh_token_obj:
         raise error_response(
             "INVALID_TOKEN", "Invalid refresh token", status.HTTP_401_UNAUTHORIZED
         )
 
+    user = refresh_token_obj.user
+
     # 3. Check expiration
-    if not user.refresh_token_expiry or user.refresh_token_expiry < datetime.utcnow():
+    if refresh_token_obj.expiry < datetime.utcnow():
         # Clear expired token
-        user.refresh_token = None
-        user.refresh_token_expiry = None
+        db.delete(refresh_token_obj)
         db.commit()
         raise error_response(
             "TOKEN_EXPIRED", "Refresh token has expired", status.HTTP_401_UNAUTHORIZED
@@ -425,28 +429,28 @@ def refresh(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db))
     access_token = auth_utils.create_access_token(
         data={"sub": user.email, "user_id": user.id}
     )
-    new_refresh_token = auth_utils.create_refresh_token()
+    new_refresh_token_str = auth_utils.create_refresh_token()
+    new_expiry = datetime.utcnow() + timedelta(days=7)
 
     # 5. Blacklist old refresh token in Redis (with TTL equal to
     # remaining expiry time, minimum 1 second)
-    remaining_ttl = 0
-    if user.refresh_token_expiry:
-        remaining_ttl = int(
-            (user.refresh_token_expiry - datetime.utcnow()).total_seconds()
-        )
+    remaining_ttl = int((refresh_token_obj.expiry - datetime.utcnow()).total_seconds())
     if remaining_ttl > 0:
         redis_client.setex(
             f"blacklist:token:{payload.refresh_token}", remaining_ttl, "revoked"
         )
 
-    # 6. Save new refresh token details to db
-    user.refresh_token = new_refresh_token
-    user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
+    # 6. Save new refresh token details to db, delete old one
+    db.delete(refresh_token_obj)
+    new_refresh_token = models.RefreshToken(
+        user_id=user.id, token=new_refresh_token_str, expiry=new_expiry
+    )
+    db.add(new_refresh_token)
     db.commit()
 
     return {
         "access_token": access_token,
-        "refresh_token": new_refresh_token,
+        "refresh_token": new_refresh_token_str,
         "token_type": "bearer",
     }
 
@@ -456,13 +460,13 @@ def logout(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db)):
     """
     Logs out the user and blacklists the refresh token.
     """
-    # Find user by this refresh token
-    user = (
-        db.query(models.User)
-        .filter(models.User.refresh_token == payload.refresh_token)
+    # Find refresh token
+    refresh_token_obj = (
+        db.query(models.RefreshToken)
+        .filter(models.RefreshToken.token == payload.refresh_token)
         .first()
     )
-    if not user:
+    if not refresh_token_obj:
         raise error_response(
             "INVALID_TOKEN",
             "Invalid refresh token",
@@ -470,11 +474,7 @@ def logout(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db)):
         )
 
     # Add to Redis blacklist (with TTL equal to remaining expiry time, minimum 1 second)
-    remaining_ttl = 0
-    if user.refresh_token_expiry:
-        remaining_ttl = int(
-            (user.refresh_token_expiry - datetime.utcnow()).total_seconds()
-        )
+    remaining_ttl = int((refresh_token_obj.expiry - datetime.utcnow()).total_seconds())
     if remaining_ttl > 0:
         redis_client.setex(
             f"blacklist:token:{payload.refresh_token}",
@@ -483,8 +483,7 @@ def logout(payload: schemas.TokenRefreshRequest, db: Session = Depends(get_db)):
         )
 
     # Clear from DB
-    user.refresh_token = None
-    user.refresh_token_expiry = None
+    db.delete(refresh_token_obj)
     db.commit()
     audit_logger.info(
         "AUTH_LOGOUT",
@@ -626,22 +625,17 @@ def reset_password(
     hashed_pwd = auth_utils.hash_password(payload.new_password)
     user.hashed_password = hashed_pwd
 
-    # 4. Invalidate/revoke current refresh token to force re-login on all devices
-    if user.refresh_token:
+    # 4. Invalidate/revoke ALL refresh tokens for the user to force re-login on all devices
+    for rt in user.refresh_tokens:
         # Blacklist it in Redis
-        remaining_ttl = 0
-        if user.refresh_token_expiry:
-            remaining_ttl = int(
-                (user.refresh_token_expiry - datetime.utcnow()).total_seconds()
-            )
+        remaining_ttl = int((rt.expiry - datetime.utcnow()).total_seconds())
         if remaining_ttl > 0:
             redis_client.setex(
-                f"blacklist:token:{user.refresh_token}",
+                f"blacklist:token:{rt.token}",
                 remaining_ttl,
                 "revoked",
             )
-        user.refresh_token = None
-        user.refresh_token_expiry = None
+        db.delete(rt)
 
     # Clear reset token and expiry
     user.password_reset_token = None

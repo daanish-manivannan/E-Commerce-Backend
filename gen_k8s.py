@@ -1,5 +1,3 @@
-import os
-
 MANIFESTS = {
     "kubernetes/namespace.yaml": """apiVersion: v1
 kind: Namespace
@@ -436,7 +434,7 @@ spec:
       protocol: TCP
       port: 8001
       targetPort: 8001
-"""
+""",
 }
 
 for path, content in MANIFESTS.items():

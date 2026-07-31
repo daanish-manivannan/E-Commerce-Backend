@@ -9,7 +9,6 @@ import pika
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from orders.models import Order
-from products.models import Product
 
 logger = logging.getLogger("saga_consumer")
 logger.setLevel(logging.INFO)
@@ -18,9 +17,12 @@ formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 logHandler.setFormatter(formatter)
 logger.addHandler(logHandler)
 
-RABBITMQ_URL = os.environ.get("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")
+RABBITMQ_URL = os.environ.get(
+    "CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//"
+)
 EXCHANGE_NAME = "ecom.domain.events"
 QUEUE_NAME = "saga.inventory.compensation"
+
 
 class Command(BaseCommand):
     help = "Runs the RabbitMQ consumer for Saga Compensating Transactions"
@@ -35,7 +37,9 @@ class Command(BaseCommand):
             port=parsed.port or 5672,
             credentials=credentials,
             virtual_host=(
-                "/" if not parsed.path or parsed.path == "//" else parsed.path.lstrip("/")
+                "/"
+                if not parsed.path or parsed.path == "//"
+                else parsed.path.lstrip("/")
             ),
         )
 
@@ -58,7 +62,9 @@ class Command(BaseCommand):
             if routing_key == "payment.failed":
                 order_id = event.get("order_id")
                 if not order_id:
-                    logger.warning("No order_id in payment.failed event. Cannot compensate.")
+                    logger.warning(
+                        "No order_id in payment.failed event. Cannot compensate."
+                    )
                     channel.basic_ack(delivery_tag=method.delivery_tag)
                     return
 
@@ -66,21 +72,27 @@ class Command(BaseCommand):
                     with transaction.atomic():
                         order = Order.objects.get(id=order_id)
                         if order.status == "pending":
-                            logger.info(f"Compensating transaction for Order {order.id}. Restoring inventory...")
+                            logger.info(
+                                f"Compensating transaction for Order {order.id}. Restoring inventory..."
+                            )
                             order.status = "canceled"
                             order.save()
-                            
+
                             # Restore inventory
                             for item in order.items.all():
                                 product = item.product
                                 product.stock += item.quantity
                                 product.save()
-                                logger.info(f"Restored {item.quantity} units of {product.name}")
+                                logger.info(
+                                    f"Restored {item.quantity} units of {product.name}"
+                                )
                         else:
-                            logger.info(f"Order {order.id} is already {order.status}. No compensation needed.")
+                            logger.info(
+                                f"Order {order.id} is already {order.status}. No compensation needed."
+                            )
                 except Order.DoesNotExist:
                     logger.error(f"Order {order_id} not found during compensation.")
-            
+
             # Acknowledge
             if not channel._impl.is_closed:
                 channel.basic_ack(delivery_tag=method.delivery_tag)
@@ -100,17 +112,23 @@ class Command(BaseCommand):
         )
 
         # DLX setup for Saga
-        channel.exchange_declare(exchange="ecom.dlx", exchange_type="direct", durable=True)
+        channel.exchange_declare(
+            exchange="ecom.dlx", exchange_type="direct", durable=True
+        )
         channel.queue_declare(queue="saga.dlq", durable=True)
-        channel.queue_bind(exchange="ecom.dlx", queue="saga.dlq", routing_key=QUEUE_NAME)
+        channel.queue_bind(
+            exchange="ecom.dlx", queue="saga.dlq", routing_key=QUEUE_NAME
+        )
 
         arguments = {
             "x-dead-letter-exchange": "ecom.dlx",
-            "x-dead-letter-routing-key": QUEUE_NAME
+            "x-dead-letter-routing-key": QUEUE_NAME,
         }
 
         channel.queue_declare(queue=QUEUE_NAME, durable=True, arguments=arguments)
-        channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key="payment.failed")
+        channel.queue_bind(
+            exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key="payment.failed"
+        )
 
         logger.info(f"Subscribed to {EXCHANGE_NAME} with routing_key 'payment.failed'")
 
