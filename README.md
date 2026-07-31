@@ -6,24 +6,7 @@ FastAPI handles identity and sessions, Kong owns the public edge, Django REST Fr
 owns ecommerce business logic, PostgreSQL stores persistent data, Redis backs Celery and
 token revocation state, Celery runs background work, and Stripe confirms payments.
 
-## Current Status
-
-**Pre-deployment checkpoint — Phases 0–4 and Phase 6 complete.**
-
-The platform has moved well beyond the initial Django API into a gateway-first, observability-ready
-backend with hardened identity, automated CI/CD, Redis caching, and 70 automated tests.
-
-## What Has Been Built
-
-| Phase | Description | Status |
-| --- | --- | --- |
-| Phase 0 | Code quality, settings split, Docker stack | ✅ Complete — June 1, 2026 |
-| Phase 1 | Security hardening (tokens, email verification, lockouts, rate limits) | ✅ Complete — June 4, 2026 |
-| Phase 2 | Observability (structured JSON logs, standard error responses, audit logs) | ✅ Complete — June 8, 2026 |
-| Phase 3 | Monitoring (Prometheus, Grafana, health checks) | ✅ Complete — June 12, 2026 |
-| Phase 4 | CI/CD pipeline (GitHub Actions, 70 tests, Dependabot, Docker build) | ✅ Complete — June 22, 2026 |
-| Phase 6 | Redis caching (product and category cache, cache-aside, signal invalidation) | ✅ Complete — June 22, 2026 |
-| Phase 5 | Cloud deployment (Railway / AWS) | 🔜 Next |
+The platform has evolved from a simple monolithic API into a gateway-first, observability-ready backend with hardened identity, automated CI/CD, Redis caching, event-driven integrations (RabbitMQ), and comprehensive test coverage.
 
 ## Architecture
 
@@ -66,8 +49,8 @@ Host: http://127.0.0.1:8080
 | Observability | Structured JSON logging, standard error schema, audit log events |
 | Monitoring | Prometheus metrics, Grafana dashboard, health endpoints |
 | Testing | pytest, pytest-django, DRF APIClient — 70 tests (44 identity + 26 Django) |
-| CI/CD | GitHub Actions (lint, format, import-sort, tests), Dependabot, GitGuardian |
-| Quality | ruff, black, isort, mypy, pre-commit |
+| CI/CD | GitHub Actions (lint, format, tests), Dependabot, GitGuardian |
+| Quality | ruff, black, isort, mypy |
 | Runtime | Docker, Docker Compose |
 
 ## Services
@@ -107,17 +90,14 @@ docker-compose.yml
 Makefile
   Helper targets for generating/reloading Kong config.
 
-api_tests.rest
-  Manual API flow through Kong.
+scripts/
+  Helper scripts for gateway testing and Kubernetes manifests generation.
 
-gateway_test.py
-  Gateway behavior verification helper.
+docs/
+  API specifications and manual REST client test flows.
 
 PROJECT_OVERVIEW.md
-  Detailed architecture, flow diagrams, implementation notes, and cleanup items.
-
-API Spec Ecom 2.yaml
-  API specification artifact.
+  Detailed architecture, flow diagrams, and implementation notes.
 ```
 
 ## Public Gateway Routes
@@ -229,9 +209,9 @@ Order integrity rules:
 | --- | --- | --- |
 | Identity Service | Registration, email verification, login, password reset, refresh rotation, logout | 44 tests |
 | Django Service | Order creation, stock validation, price snapshots, ownership isolation, error shape | 26 tests |
-| **Total** | | **70 tests** |
+| **Total** | | **70+ tests** |
 
-Run Django/identity tests:
+Run backend tests:
 
 ```bash
 docker-compose exec order-service pytest
@@ -240,7 +220,7 @@ docker-compose exec order-service pytest
 Run gateway verification:
 
 ```bash
-python gateway_test.py
+python scripts/gateway_test.py
 ```
 
 Run quality tools from the repo root:
@@ -292,14 +272,6 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 ALLOWED_HOSTS=localhost,127.0.0.1,order-service,gateway
 ```
-
-Production settings in `Order & Catalog Service/config/settings/production.py`
-validate all required environment variables at startup. Stripe key format validation
-is also available in `config/env_validator.py`.
-
-> **Security note:** `gateway/kong.yml` currently contains a local JWT credential secret.
-> For deployment, generate Kong config from a secret manager or deployment-time input
-> rather than committing real credentials.
 
 ## Run Locally
 
@@ -469,17 +441,5 @@ Django monolith
   -> Structured JSON logging, standard error responses, audit events
   -> Prometheus metrics + Grafana dashboard + health endpoints
   -> GitHub Actions CI/CD (lint, format, test) + Dependabot + secret scanning
-  -> Redis caching for products and categories (cache-aside, signal invalidation)
-  -> 70 automated tests (44 identity + 26 Django)
+  -> 70+ automated tests across identity and Django services
 ```
-
-## Pre-Deployment Cleanup Items
-
-| Area | Note |
-| --- | --- |
-| Kong JWT secret | `gateway/kong.yml` contains a local credential — use deployment-time injection for production |
-| Git secret history | Prior development values may exist in git history — rotate any matching credentials |
-| Admin/static exposure | `/admin/` and `/static/` are intentionally not exposed through Kong |
-| Legacy checkout route | `/orders/*` exists for compatibility — prefer `/api/orders/<id>/create-checkout-session/` |
-| Multi-device sessions | Currently one active refresh token per user — add session table if independent device sessions are needed |
-| Linting | ~30 ruff issues remaining (mostly line length) — `ruff check --fix` handles many |

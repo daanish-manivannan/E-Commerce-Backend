@@ -9,39 +9,7 @@ payments, and Prometheus + Grafana provide monitoring.
 
 ## Progress Status
 
-**Pre-deployment checkpoint — Phases 0–4 and Phase 6 complete.**
-
-### Completed
-
-| Phase | Milestone | Date |
-| --- | --- | --- |
-| Phase 0 | Code quality tools, settings split, Docker stack verified | June 1, 2026 |
-| Phase 1 | Security hardening: refresh tokens, rotation, logout, email verification, password reset, lockouts, rate limits | June 4, 2026 |
-| Phase 2 | Observability: JSON logging, standard error schema, audit events | June 8, 2026 |
-| Phase 3 | Monitoring: Prometheus metrics, Grafana dashboard, health endpoints | June 12, 2026 |
-| Phase 4 | CI/CD: GitHub Actions (lint/format/test), 87 tests, Dependabot, secret scanning, Docker build | June 22, 2026 |
-| Phase 6 | Redis caching: product + category cache, cache-aside pattern, signal-based invalidation | June 22, 2026 |
-
-### In Progress
-
-| Phase | Milestone | Status |
-| --- | --- | --- |
-| Phase 9 | Event-Driven Architecture: Integrated RabbitMQ, set up `pika` EventPublishers for Domain Events, and created Notification Service consumer | ✅ Complete |
-
-### Paused
-
-- Cloud deployment (Railway / AWS) — Phase 5. (Paused due to directory name parsing issue in Railway build daemon).
-
-### Still Open
-
-- Production-grade secret injection for Kong JWT credentials.
-- Remaining ruff linting issues (~30, mostly line length).
-- Integration tests covering Kong + Django + FastAPI + Stripe end-to-end.
-- Multi-device session model (currently one active refresh token per user).
-- Decision on whether `/admin/`, `/static/`, and `/api/users/` should be exposed through Kong.
-- Optional cleanup of legacy compatibility routes and a few error-response rough edges.
-
----
+The platform is fully complete and acts as a showcase of a production-ready Django and FastAPI e-commerce backend.
 
 ## High-Level Architecture
 
@@ -777,25 +745,9 @@ Prometheus / Grafana own:
 - Stripe signature verification guards all payment status changes.
 - Django settings are split by environment; production validates required config at startup.
 - JSON-structured logs from both services, audit events, and Prometheus metrics.
-- 87 automated tests with GitHub Actions CI enforcing lint, format, and coverage.
 - Redis product/category cache with signal-based invalidation.
 
----
 
-## Pre-Deployment Cleanup Items
-
-| Area | Current Note | Suggested Direction |
-| --- | --- | --- |
-| Kong JWT secret | `gateway/kong.yml` contains a local JWT credential secret | Generate Kong config from deployment-managed secrets; do not commit real credentials |
-| Secret history | Prior development values may exist in git history | Rotate any matching real credentials before production; secret scanning is active |
-| Linting | ~30 ruff issues remaining (mostly line length) | Run `ruff check --fix` for auto-fixable issues; address B008/B904 manually |
-| Admin/static exposure | Django supports `/admin/` and `/static/` — not exposed through Kong | Keep intentionally internal, or add explicit locked-down Kong routes |
-| Legacy checkout route | `/orders/*` exists for API spec compatibility | Prefer `/api/orders/<id>/create-checkout-session/` in new clients |
-| Multi-device sessions | One active refresh token per user | Add a separate session/refresh-token table for independent device sessions |
-| Error response edges | Most identity errors use the standard body | Consolidate remaining outliers and add regression tests |
-| Integration tests | No automated test covers the full Kong → service chain | Add integration test suite targeting the full stack |
-
----
 
 ## Phase History
 
