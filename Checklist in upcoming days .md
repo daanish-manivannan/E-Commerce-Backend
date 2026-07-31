@@ -582,19 +582,19 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ## Patterns
 
-* [ ] CQRS
-* [ ] Saga Pattern
-* [ ] Distributed Transactions
+* [x] CQRS
+* [x] Saga Pattern
+* [x] Distributed Transactions
 
 ## Reliability
 
-* [ ] Retry Policies
-* [ ] Circuit Breakers
-* [ ] Dead Letter Queues
+* [x] Retry Policies
+* [x] Circuit Breakers
+* [x] Dead Letter Queues
 
 ### Milestone
 
-* [ ] Senior-Level Backend Design
+* [x] Senior-Level Backend Design
 
 ---
 
